@@ -64,14 +64,14 @@ public partial class MainWindow : Window
             "Winpress  v" + Winpress.Services.UpdateService.CurrentVersion + "\n\n" +
             "The archive manager Windows should have shipped with.\n\n" +
             "ZIP · 7z · RAR · TAR · GZ · BZ2 · XZ · ISO · WIM · CAB and more\n\n" +
-            "Open source · GPL-3.0 · github.com/YOUR_GITHUB_USERNAME/Winpress",
+            "Open source · GPL-3.0 · github.com/snipeem/Winpress",
             "About Winpress",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }
 
     private void MenuGitHub_Click(object sender, RoutedEventArgs e) =>
-        OpenUrl("https://github.com/YOUR_GITHUB_USERNAME/Winpress");
+        OpenUrl("https://github.com/snipeem/Winpress");
 
     // ── Drag & drop ───────────────────────────────────────────────────────────
 

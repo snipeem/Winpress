@@ -8,11 +8,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YOUR_GITHUB_USERNAME/Winpress/releases/latest">
-    <img alt="Latest Release" src="https://img.shields.io/github/v/release/YOUR_GITHUB_USERNAME/Winpress?style=flat-square&color=2B7FD4&label=release"/>
+  <a href="https://github.com/snipeem/Winpress/releases/latest">
+    <img alt="Latest Release" src="https://img.shields.io/github/v/release/snipeem/Winpress?style=flat-square&color=2B7FD4&label=release"/>
   </a>
-  <a href="https://github.com/YOUR_GITHUB_USERNAME/Winpress/releases">
-    <img alt="Downloads" src="https://img.shields.io/github/downloads/YOUR_GITHUB_USERNAME/Winpress/total?style=flat-square&color=2B7FD4"/>
+  <a href="https://github.com/snipeem/Winpress/releases">
+    <img alt="Downloads" src="https://img.shields.io/github/downloads/snipeem/Winpress/total?style=flat-square&color=2B7FD4"/>
   </a>
   <img alt="Platform" src="https://img.shields.io/badge/Windows-10%2F11-2B7FD4?style=flat-square"/>
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-2B7FD4?style=flat-square"/>
@@ -51,7 +51,7 @@
 
 ## Installation
 
-No installer. [Download the latest release](https://github.com/YOUR_GITHUB_USERNAME/Winpress/releases/latest), unzip, and run `Winpress.exe` from anywhere.
+No installer. [Download the latest release](https://github.com/snipeem/Winpress/releases/latest), unzip, and run `Winpress.exe` from anywhere.
 
 | File | When to use |
 |---|---|
@@ -86,7 +86,7 @@ No installer, no UAC prompt (as long as Winpress.exe lives in a folder you own, 
 
 ```bash
 # Clone
-git clone https://github.com/YOUR_GITHUB_USERNAME/Winpress.git
+git clone https://github.com/snipeem/Winpress.git
 cd Winpress
 
 # Run in development
