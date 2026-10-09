@@ -99,13 +99,13 @@
         <Border Grid.Row="1" Background="#FF1F1F1F" Padding="6,5">
             <DockPanel>
                 <!-- Left actions -->
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
                     <!-- Open -->
                     <Button Style="{StaticResource ToolbarButtonStyle}"
                             Click="MenuOpen_Click" ToolTip="Open Archive (Ctrl+O)">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
+                        <StackPanel Orientation="Horizontal">
                             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8E5;"
-                                       FontSize="14" VerticalAlignment="Center"/>
+                                       FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Open" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -126,9 +126,9 @@
                     <Button Style="{StaticResource AccentButtonStyle}"
                             Command="{Binding ExtractAllCommand}"
                             ToolTip="Extract All Files (Ctrl+E)">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
+                        <StackPanel Orientation="Horizontal">
                             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE896;"
-                                       FontSize="14" VerticalAlignment="Center"/>
+                                       FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Extract All" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -137,9 +137,9 @@
                     <Button Style="{StaticResource ToolbarButtonStyle}"
                             Command="{Binding ExtractSelectedCommand}"
                             ToolTip="Extract Selected Files (Ctrl+Shift+E)">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
+                        <StackPanel Orientation="Horizontal">
                             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEA52;"
-                                       FontSize="14" VerticalAlignment="Center"/>
+                                       FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Extract Selected" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -147,9 +147,9 @@
 
                 <!-- Right: search box -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
-                            VerticalAlignment="Center" Spacing="6">
+                            VerticalAlignment="Center">
                     <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE721;"
-                               FontSize="13" Foreground="#9A9A9A" VerticalAlignment="Center"/>
+                               FontSize="13" Foreground="#9A9A9A" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <TextBox Style="{StaticResource SearchBoxStyle}"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                              Width="180" Height="28"
