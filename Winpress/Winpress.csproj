@@ -20,7 +20,7 @@
     <Copyright>GPL-3.0</Copyright>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <ApplicationIcon>Winpress\Resources\app.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <!-- ── Publish settings (used by GitHub Actions release workflow) ──────── -->
     <!-- Single self-contained .exe with no runtime dependency on the user's PC -->
     <PublishSingleFile Condition="'$(Configuration)' == 'Release'">true</PublishSingleFile>
@@ -35,8 +35,8 @@
 
   <ItemGroup>
     <!-- Archive reading/writing — 40+ formats, pure managed, no native deps -->
-    <!-- Latest stable: 0.42.1 (Dec 2025) -->
-    <PackageReference Include="SharpCompress" Version="0.42.1" />
+    <!-- Latest stable: 0.50.5 (Oct 2026) -->
+    <PackageReference Include="SharpCompress" Version="0.50.5" />
 
     <!-- Source-generator MVVM — zero boilerplate, .NET 10 source-gen optimised -->
     <!-- Latest stable: 8.4.2 (Mar 2026) -->
