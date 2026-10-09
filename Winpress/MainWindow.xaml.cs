@@ -6,8 +6,12 @@ using Winpress.Models;
 using Winpress.ViewModels;
 using Winpress.Views;
 // Explicit aliases — prevents ambiguity with System.Windows.Forms when UseWindowsForms=true
-using DragEventArgs = System.Windows.DragEventArgs;
-using KeyEventArgs  = System.Windows.Input.KeyEventArgs;
+using DragEventArgs   = System.Windows.DragEventArgs;
+using KeyEventArgs    = System.Windows.Input.KeyEventArgs;
+using MessageBox      = System.Windows.MessageBox;
+using DataFormats     = System.Windows.DataFormats;
+using DragDropEffects = System.Windows.DragDropEffects;
+using OpenFileDialog  = Microsoft.Win32.OpenFileDialog;
 
 namespace Winpress;
 

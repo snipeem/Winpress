@@ -52,16 +52,16 @@ public partial class MainViewModel : ObservableObject
     // For the "Register Explorer context menus" toggle in the menu
     [ObservableProperty] private bool _shellIntegrationEnabled = ShellIntegrationService.IsRegistered();
 
-    // ── Events (raised for UI-layer dialogs that need a WPF Window) ───────────
+    // ── Callbacks (set by the UI layer for dialogs that need a WPF Window) ─────
 
-    /// Raised when an encrypted archive needs a password.  Args = archive path.
-    public event Func<string, Task<string?>>? PasswordRequested;
+    /// Called when an encrypted archive needs a password.  Args = archive path.
+    public Func<string, Task<string?>>? PasswordRequested { get; set; }
 
-    /// Raised when the extraction needs a destination folder.
-    public event Func<string, Task<string?>>? FolderPickerRequested;
+    /// Called when the extraction needs a destination folder.
+    public Func<string, Task<string?>>? FolderPickerRequested { get; set; }
 
-    /// Raised to show the progress window for a running extraction.
-    public event Action<ExtractionProgressViewModel>? ShowProgressWindow;
+    /// Called to show the progress window for a running extraction.
+    public Action<ExtractionProgressViewModel>? ShowProgressWindow { get; set; }
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
