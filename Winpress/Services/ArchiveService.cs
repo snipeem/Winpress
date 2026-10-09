@@ -48,7 +48,7 @@ public class ArchiveService
                     LookForHeader    = true    // detect format even with wrong extension
                 };
 
-                using var archive = ArchiveFactory.Open(filePath, options);
+                using var archive = ArchiveFactory.OpenArchive(filePath, options);
 
                 // If the first encrypted entry is encountered without a password, bail.
                 var entries = new List<ArchiveEntry>();

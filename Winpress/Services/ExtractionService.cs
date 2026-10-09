@@ -118,7 +118,7 @@ public class ExtractionService
             LookForHeader   = true
         };
 
-        using var archive = ArchiveFactory.Open(archivePath, options);
+        using var archive = ArchiveFactory.OpenArchive(archivePath, options);
         Directory.CreateDirectory(destination);
 
         var extractOptions = new ExtractionOptions
