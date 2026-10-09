@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build & Verify
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore NuGet packages
+        run: dotnet restore Winpress/Winpress.csproj
+
+      - name: Build Debug
+        run: dotnet build Winpress/Winpress.csproj --configuration Debug --no-restore
+
+      - name: Build Release (fast framework-dependent check)
+        shell: pwsh
+        run: |
+          dotnet build Winpress/Winpress.csproj `
+            --configuration Release `
+            --no-restore `
+            -p:PublishSingleFile=false `
+            -p:SelfContained=false

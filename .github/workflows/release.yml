@@ -1,0 +1,133 @@
+name: Release
+
+# Triggers on version tags: v1.0.0, v1.2.3, v2.0.0-beta, etc.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write   # required to create a GitHub Release
+
+jobs:
+  build-and-release:
+    name: Build & Publish
+    runs-on: windows-latest
+
+    env:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+      DOTNET_NOLOGO: 1
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0        # full history for changelog generation
+
+      # ── 2. .NET 10 SDK ───────────────────────────────────────────────────────
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      # ── 3. Strip leading 'v' from tag (e.g. v1.2.3 → 1.2.3) ────────────────
+      - name: Extract version
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $ver = $tag.TrimStart('v')
+          echo "TAG=$tag"     >> $env:GITHUB_OUTPUT
+          echo "VERSION=$ver" >> $env:GITHUB_OUTPUT
+
+      # ── 4. Restore ───────────────────────────────────────────────────────────
+      - name: Restore NuGet packages
+        run: dotnet restore Winpress/Winpress.csproj
+
+      # ── 5a. Publish — self-contained single .exe (primary download + OTA) ───
+      # Named exactly "Winpress.exe" so UpdateService can locate it in the
+      # release assets by name.
+      - name: Publish self-contained (win-x64)
+        shell: pwsh
+        run: |
+          dotnet publish Winpress/Winpress.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:Version=${{ steps.ver.outputs.VERSION }} `
+            -p:AssemblyVersion=${{ steps.ver.outputs.VERSION }}.0 `
+            -p:FileVersion=${{ steps.ver.outputs.VERSION }}.0 `
+            --output ./publish/self-contained
+
+      # ── 5b. Publish — framework-dependent (smaller, needs .NET 10 runtime) ──
+      - name: Publish framework-dependent (win-x64)
+        shell: pwsh
+        run: |
+          dotnet publish Winpress/Winpress.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained false `
+            -p:PublishSingleFile=true `
+            -p:Version=${{ steps.ver.outputs.VERSION }} `
+            --output ./publish/fde
+
+      # ── 6. Create zip archives ───────────────────────────────────────────────
+      - name: Package archives
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.TAG }}"
+          Compress-Archive `
+            -Path "./publish/self-contained/Winpress.exe" `
+            -DestinationPath "./Winpress-$v-win-x64-portable.zip"
+          Compress-Archive `
+            -Path "./publish/fde/Winpress.exe" `
+            -DestinationPath "./Winpress-$v-win-x64-requires-dotnet10.zip"
+
+      # ── 7. Auto-generate changelog from git log ──────────────────────────────
+      - name: Generate changelog
+        id: changelog
+        shell: pwsh
+        run: |
+          $prev = git describe --tags --abbrev=0 HEAD^ 2>$null
+          if ($LASTEXITCODE -ne 0) { $prev = "" }
+          if ($prev) {
+            $lines = git log "$prev..HEAD" --pretty=format:"- %s" --no-merges
+          } else {
+            $lines = git log --pretty=format:"- %s" --no-merges -30
+          }
+          $body = "## Changes`n`n" + ($lines -join "`n")
+          "BODY<<EOF"  >> $env:GITHUB_OUTPUT
+          $body        >> $env:GITHUB_OUTPUT
+          "EOF"        >> $env:GITHUB_OUTPUT
+
+      # ── 8. Create GitHub Release ─────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: "Winpress ${{ steps.ver.outputs.TAG }}"
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          body: |
+            ## Winpress ${{ steps.ver.outputs.TAG }}
+
+            ### Downloads
+
+            | File | Description |
+            |---|---|
+            | `Winpress.exe` | **Recommended · Self-contained** — no dependencies, just run it |
+            | `Winpress-${{ steps.ver.outputs.TAG }}-win-x64-portable.zip` | Same binary packaged in a zip |
+            | `Winpress-${{ steps.ver.outputs.TAG }}-win-x64-requires-dotnet10.zip` | Smaller; needs [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+
+            > **Existing installs update automatically.** Winpress detects this release
+            > on next launch and offers a one-click update with no reinstallation needed.
+
+            ${{ steps.changelog.outputs.BODY }}
+          files: |
+            ./publish/self-contained/Winpress.exe
+            ./Winpress-${{ steps.ver.outputs.TAG }}-win-x64-portable.zip
+            ./Winpress-${{ steps.ver.outputs.TAG }}-win-x64-requires-dotnet10.zip
