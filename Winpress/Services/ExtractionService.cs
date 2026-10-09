@@ -1,3 +1,4 @@
+using System.IO;
 using SharpCompress.Archives;
 using SharpCompress.Common;
 using SharpCompress.Readers;

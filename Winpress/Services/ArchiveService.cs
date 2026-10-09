@@ -1,3 +1,5 @@
+using System.IO;
+using System.Security.Cryptography;
 using SharpCompress.Archives;
 using SharpCompress.Common;
 using SharpCompress.Readers;

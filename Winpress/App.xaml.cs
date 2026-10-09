@@ -1,11 +1,12 @@
+using System.IO;
 using System.Windows;
 using Winpress.Services;
 using Winpress.ViewModels;
 using Winpress.Views;
 // Explicit aliases — prevents ambiguity with System.Windows.Forms when UseWindowsForms=true
-using Application     = System.Windows.Application;
+using Application      = System.Windows.Application;
 using StartupEventArgs = System.Windows.StartupEventArgs;
-using ExitEventArgs   = System.Windows.ExitEventArgs;
+using ExitEventArgs    = System.Windows.ExitEventArgs;
 
 namespace Winpress;
 
@@ -56,7 +57,7 @@ public partial class App : Application
 
                 case "--extract-to":
                     if (File.Exists(archive) && dest != null)
-                        vm.ExtractToPathCommand.Execute((archive, dest));
+                        vm.ExtractToPathCommand.Execute((archive, dest!));
                     break;
 
                 default:

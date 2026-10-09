@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Winpress.Models;
@@ -173,7 +174,9 @@ public partial class MainViewModel : ObservableObject
     public async Task ExtractAllAsync()
     {
         if (ArchivePath == null) return;
-        var dest = await FolderPickerRequested?.Invoke("Choose extraction destination") ?? null;
+        var dest = FolderPickerRequested is not null
+            ? await FolderPickerRequested("Choose extraction destination")
+            : null;
         if (dest == null) return;
         await RunExtractionAsync(dest, extractAll: true);
     }
@@ -182,7 +185,9 @@ public partial class MainViewModel : ObservableObject
     public async Task ExtractSelectedAsync()
     {
         if (ArchivePath == null || SelectedEntries.Count == 0) return;
-        var dest = await FolderPickerRequested?.Invoke("Extract selected files to…") ?? null;
+        var dest = FolderPickerRequested is not null
+            ? await FolderPickerRequested("Extract selected files to\u2026")
+            : null;
         if (dest == null) return;
         await RunExtractionAsync(dest, extractAll: false);
     }

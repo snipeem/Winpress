@@ -20,7 +20,7 @@
     <Copyright>GPL-3.0</Copyright>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <ApplicationIcon>Winpress\Resources\app.ico</ApplicationIcon>
     <!-- ── Publish settings (used by GitHub Actions release workflow) ──────── -->
     <!-- Single self-contained .exe with no runtime dependency on the user's PC -->
     <PublishSingleFile Condition="'$(Configuration)' == 'Release'">true</PublishSingleFile>
