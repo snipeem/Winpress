@@ -149,7 +149,7 @@ public class UpdateService : IDisposable
     public void ApplyUpdate(string downloadedExePath)
     {
         var currentExe = Environment.ProcessPath
-            ?? Assembly.GetExecutingAssembly().Location;
+            ?? Path.Combine(AppContext.BaseDirectory, "Winpress.exe");
 
         var scriptPath = Path.Combine(Path.GetTempPath(), "winpress_selfupdate.cmd");
 

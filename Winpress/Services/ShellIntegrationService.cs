@@ -111,5 +111,5 @@ public class ShellIntegrationService
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static string GetExePath() =>
-        System.Reflection.Assembly.GetExecutingAssembly().Location;
+        Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Winpress.exe");
 }
