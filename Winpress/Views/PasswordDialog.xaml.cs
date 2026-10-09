@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
+// Explicit alias — prevents ambiguity with System.Windows.Forms when UseWindowsForms=true
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace Winpress.Views;
 

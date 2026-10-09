@@ -5,6 +5,9 @@ using Microsoft.Win32;
 using Winpress.Models;
 using Winpress.ViewModels;
 using Winpress.Views;
+// Explicit aliases — prevents ambiguity with System.Windows.Forms when UseWindowsForms=true
+using DragEventArgs = System.Windows.DragEventArgs;
+using KeyEventArgs  = System.Windows.Input.KeyEventArgs;
 
 namespace Winpress;
 
