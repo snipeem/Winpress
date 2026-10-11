@@ -14,6 +14,8 @@ using DataFormats     = System.Windows.DataFormats;
 using DragDropEffects = System.Windows.DragDropEffects;
 using OpenFileDialog  = Microsoft.Win32.OpenFileDialog;
 using MouseButtons    = System.Windows.Input.MouseButtonState;
+using Point           = System.Windows.Point;
+using MouseEventArgs  = System.Windows.Input.MouseEventArgs;
 
 namespace Winpress;
 

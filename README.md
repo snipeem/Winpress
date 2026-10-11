@@ -221,7 +221,7 @@ For larger changes, open an issue first to discuss the approach.
 
 ## Acknowledgements
 
-Winpress draws design inspiration from **[MacPacker](https://github.com/sarensw/MacPacker)** by [Saren Wohlfahrt](https://github.com/sarensw) — a beautifully crafted archive manager for macOS. If you use a Mac, check it out.
+Winpress draws design inspiration from **[MacPacker](https://github.com/sarensw/MacPacker)** by [Stephan Arenswald](https://github.com/sarensw) — a beautifully crafted archive manager for macOS. If you use a Mac, check it out.
 
 ---
 
