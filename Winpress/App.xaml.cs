@@ -18,8 +18,10 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        var vm     = new MainViewModel(new ArchiveService(), new ExtractionService());
-        var window = new MainWindow(vm);
+        var archiveService = new ArchiveService();
+        var extractionService = new ExtractionService();
+        var vm     = new MainViewModel(archiveService, extractionService);
+        var window = new MainWindow(vm, extractionService);
         window.Show();
 
         // Handle command-line arguments (shell context menus, file associations).

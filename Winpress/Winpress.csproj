@@ -15,9 +15,13 @@
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
     <Product>Winpress</Product>
-    <Company>Winpress</Company>
+    <Company>snipeem</Company>
     <Description>The archive manager Windows should have shipped with. Browse, preview and extract 40+ formats.</Description>
-    <Copyright>GPL-3.0</Copyright>
+    <Copyright>Copyright © snipeem</Copyright>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    <!-- Code signing: Set to your certificate thumbprint or leave empty for unsigned builds -->
+    <SignManifests>false</SignManifests>
+    <ManifestCertificateThumbprint Condition="'$(CertificateThumbprint)' != ''">$(CertificateThumbprint)</ManifestCertificateThumbprint>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>

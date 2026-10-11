@@ -29,15 +29,18 @@
 
 - **Browse without extracting** — Navigate inside archives as if they were folders in File Explorer.
 - **Nested archives** — Archives inside archives open seamlessly; navigate back with one click.
+- **Drag-and-drop extraction** — Drag files or folders from Winpress directly to Windows Explorer or any other application. Files are extracted and dropped as real files, not wrapped in a folder.
 - **Selective extraction** — Multi-select files and folders, then extract only those.
 - **Over-the-air updates** — Winpress checks for new releases on startup and updates itself in one click.
 - **Explorer context menus** — Right-click any archive to *Open with Winpress*, *Extract Here*, or *Extract to Folder…*
-- **Drag & drop** — Drop an archive onto the window to open it instantly.
+- **Set as default app** — Register Winpress as your default archive handler through Windows Settings.
+- **Drop to open** — Drop an archive onto the window to open it instantly.
 - **Encrypted archives** — Password prompt appears only when needed.
 - **Magic-byte format detection** — Correctly identifies formats even when the extension is wrong or missing.
 - **Sortable columns** — Sort by name, type, size, packed size, ratio, or date.
 - **Keyboard-first** — Full keyboard navigation: Enter, Backspace, Alt+←, Ctrl+O, Ctrl+E, Ctrl+A.
 - **Zero dependencies** — One self-contained `.exe`, no runtime installation required.
+- **Modern UI** — Clean, minimal Windows 11-style dark theme with smooth interactions.
 
 ## Supported Formats
 
@@ -61,10 +64,45 @@ No installer. [Download the latest release](https://github.com/snipeem/Winpress/
 
 **System requirements:** Windows 10 (1809) or later · 64-bit · ~30 MB disk
 
+### Drag-and-Drop Extraction
+
+Winpress supports dragging files and folders directly from the archive view to Windows Explorer or any other application that accepts file drops:
+
+1. **Select** one or more files/folders in the archive
+2. **Click and drag** them out of the Winpress window
+3. **Drop** them onto Windows Explorer, your desktop, or another application
+4. Files are extracted and placed as real files — no wrapping folder created
+
+This works with nested archives too: you can drill down through multiple layers of archives and drag files from any level.
+
+### Code Signing & SmartScreen
+
+Windows SmartScreen may show a warning when running an unsigned executable. To remove this warning, the application should be signed with a code signing certificate. The project is configured to support code signing via the `CertificateThumbprint` property:
+
+```bash
+dotnet publish Winpress/Winpress.csproj `
+  --configuration Release `
+  --runtime win-x64 `
+  --self-contained true `
+  -p:PublishSingleFile=true `
+  -p:EnableCompressionInSingleFile=true `
+  -p:CertificateThumbprint=YOUR_CERTIFICATE_THUMBPRINT `
+  --output ./dist
+```
+
+Without a certificate, users can still run the app by clicking "More info" → "Run anyway" in the SmartScreen dialog.
+
+For detailed instructions on obtaining and using a code signing certificate, see [CODE_SIGNING.md](CODE_SIGNING.md).
+
 ### Optional: Windows Explorer context menus
 
 Launch Winpress → **Tools → Register Explorer Context Menus**.
 This adds *Open with Winpress*, *Extract Here*, and *Extract to Folder…* to the right-click menu for all supported archive types. Writes only to `HKEY_CURRENT_USER` — no administrator prompt.
+
+### Optional: Set as default archive app
+
+Launch Winpress → **Tools → Set as Default Archive App…**.
+This registers Winpress as a valid handler for archive formats and opens Windows Default Apps settings so you can select it. Note that Windows 10/11 requires manual confirmation in Settings — this is a security feature to prevent apps from silently hijacking file associations.
 
 ---
 
@@ -149,6 +187,7 @@ Winpress/
 │   │   ├── ArchiveService.cs           # Opens archives → flat entry list
 │   │   ├── ExtractionService.cs        # Extracts all / selected / single entry
 │   │   ├── ShellIntegrationService.cs  # Explorer context menus (HKCU registry)
+│   │   ├── FileAssociationService.cs   # Default app registration (HKCU registry)
 │   │   └── UpdateService.cs            # GitHub API check + download + self-replace
 │   ├── Helpers/
 │   │   ├── FormatDetector.cs           # Magic-byte archive type detection
@@ -182,7 +221,7 @@ For larger changes, open an issue first to discuss the approach.
 
 ## Acknowledgements
 
-Winpress draws design inspiration from **[MacPacker](https://macpacker.app)** by [Saren Wohlfahrt](https://sarensw.de) — a beautifully crafted archive manager for macOS. If you use a Mac, check it out.
+Winpress draws design inspiration from **[MacPacker](https://github.com/sarensw/MacPacker)** by [Saren Wohlfahrt](https://github.com/sarensw) — a beautifully crafted archive manager for macOS. If you use a Mac, check it out.
 
 ---
 

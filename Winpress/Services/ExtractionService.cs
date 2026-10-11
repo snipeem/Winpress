@@ -101,6 +101,96 @@ public class ExtractionService
         return File.Exists(extracted) ? extracted : null;
     }
 
+    // ── Drag-and-drop extraction (flat, no wrapping folder) ───────────────────
+
+    /// <summary>
+    /// Extracts only the selected entries directly to the destination,
+    /// preserving their original file/folder names without wrapping them
+    /// in a subfolder. Used for drag-and-drop to Windows Explorer.
+    /// Returns the list of extracted file/folder paths.
+    /// </summary>
+    public async Task<List<string>> ExtractFlatAsync(
+        string archivePath,
+        IEnumerable<ArchiveEntry> selected,
+        string destination,
+        string? password = null,
+        IProgress<ExtractionProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        var entriesToExtract = selected.ToList();
+        var resultPaths = new List<string>();
+
+        await Task.Run(() =>
+        {
+            var options = new ReaderOptions
+            {
+                Password = password,
+                LeaveStreamOpen = false,
+                LookForHeader = true
+            };
+
+            using var archive = ArchiveFactory.OpenArchive(archivePath, options);
+            Directory.CreateDirectory(destination);
+
+            var extractOptions = new ExtractionOptions
+            {
+                ExtractFullPath = true,
+                Overwrite = true,
+                PreserveFileTime = true
+            };
+
+            foreach (var entry in entriesToExtract)
+            {
+                ct.ThrowIfCancellationRequested();
+                var filterPrefix = entry.FullPath.Replace('\\', '/');
+
+                // For single file extraction
+                if (!entry.IsDirectory)
+                {
+                    var archiveEntry = archive.Entries
+                        .FirstOrDefault(e => !e.IsDirectory &&
+                            (e.Key ?? string.Empty).Replace('\\', '/').Equals(filterPrefix, StringComparison.OrdinalIgnoreCase));
+
+                    if (archiveEntry != null)
+                    {
+                        var targetPath = Path.Combine(destination, entry.Name);
+                        using var stream = File.Create(targetPath);
+                        archiveEntry.WriteTo(stream);
+                        resultPaths.Add(targetPath);
+                    }
+                }
+                else
+                {
+                    // For folder extraction - extract all children
+                    var prefix = filterPrefix.EndsWith("/") ? filterPrefix : filterPrefix + "/";
+                    var folderPath = Path.Combine(destination, entry.Name);
+                    Directory.CreateDirectory(folderPath);
+
+                    var childEntries = archive.Entries
+                        .Where(e => (e.Key ?? string.Empty).Replace('\\', '/').StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    foreach (var childEntry in childEntries)
+                    {
+                        if (childEntry.IsDirectory)
+                            continue;
+
+                        var relativePath = childEntry.Key!.Replace('\\', '/')[prefix.Length..];
+                        var targetPath = Path.Combine(folderPath, relativePath);
+
+                        Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+                        using var stream = File.Create(targetPath);
+                        childEntry.WriteTo(stream);
+                    }
+
+                    resultPaths.Add(folderPath);
+                }
+            }
+        }, ct);
+
+        return resultPaths;
+    }
+
     // ── Core extraction logic ─────────────────────────────────────────────────
 
     private static void DoExtract(

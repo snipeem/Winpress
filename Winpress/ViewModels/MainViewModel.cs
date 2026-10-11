@@ -52,6 +52,9 @@ public partial class MainViewModel : ObservableObject
     // For the "Register Explorer context menus" toggle in the menu
     [ObservableProperty] private bool _shellIntegrationEnabled = ShellIntegrationService.IsRegistered();
 
+    // For the "Set as Default" toggle in the menu
+    [ObservableProperty] private bool _fileAssociationEnabled = FileAssociationService.IsRegistered();
+
     // ── Callbacks (set by the UI layer for dialogs that need a WPF Window) ─────
 
     /// Called when an encrypted archive needs a password.  Args = archive path.
@@ -62,6 +65,13 @@ public partial class MainViewModel : ObservableObject
 
     /// Called to show the progress window for a running extraction.
     public Action<ExtractionProgressViewModel>? ShowProgressWindow { get; set; }
+
+    /// <summary>
+    /// Called to extract selected files to a specific path (used for drag-and-drop).
+    /// Args = (archivePath, selectedEntries, destinationPath).
+    /// Returns the list of extracted file/folder paths.
+    /// </summary>
+    public Func<string, List<ArchiveEntry>, string, Task<List<string>>>? ExtractFlatRequested { get; set; }
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
@@ -217,6 +227,18 @@ public partial class MainViewModel : ObservableObject
         await RunExtractionAsync(args.Destination, extractAll: true);
     }
 
+    /// <summary>
+    /// Extracts selected entries to a specific path (used for drag-and-drop).
+    /// Returns the list of extracted file/folder paths.
+    /// </summary>
+    public async Task<List<string>> ExtractSelectedToPathAsync(string destination)
+    {
+        if (ArchivePath == null || SelectedEntries.Count == 0 || ExtractFlatRequested == null)
+            return new List<string>();
+
+        return await ExtractFlatRequested(ArchivePath, SelectedEntries, destination);
+    }
+
     // ── Search / filter ───────────────────────────────────────────────────────
 
     partial void OnSearchTextChanged(string value)
@@ -250,6 +272,24 @@ public partial class MainViewModel : ObservableObject
             ShellIntegrationService.Register();
 
         ShellIntegrationEnabled = ShellIntegrationService.IsRegistered();
+    }
+
+    // ── File association (default app) ───────────────────────────────────────
+
+    [RelayCommand]
+    public void SetAsDefault()
+    {
+        // Register Winpress as a valid handler in the registry, then open
+        // Windows Default Apps settings so the user can select it.
+        FileAssociationService.RegisterAndOpenSettings();
+        FileAssociationEnabled = FileAssociationService.IsRegistered();
+    }
+
+    [RelayCommand]
+    public void RemoveDefault()
+    {
+        FileAssociationService.UnregisterCapabilities();
+        FileAssociationEnabled = FileAssociationService.IsRegistered();
     }
 
     // ══════════════════════════════════════════════════════════════════════════

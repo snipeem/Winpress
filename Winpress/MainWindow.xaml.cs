@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -12,24 +13,32 @@ using MessageBox      = System.Windows.MessageBox;
 using DataFormats     = System.Windows.DataFormats;
 using DragDropEffects = System.Windows.DragDropEffects;
 using OpenFileDialog  = Microsoft.Win32.OpenFileDialog;
+using MouseButtons    = System.Windows.Input.MouseButtonState;
 
 namespace Winpress;
 
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
+    private readonly Winpress.Services.ExtractionService _extractionService;
 
     // ── Construction ─────────────────────────────────────────────────────────
 
-    public MainWindow(MainViewModel vm)
+    public MainWindow(MainViewModel vm, Winpress.Services.ExtractionService extractionService)
     {
         InitializeComponent();
         DataContext = _vm = vm;
+        _extractionService = extractionService;
 
         // Wire up events that require UI-layer dialogs
         _vm.PasswordRequested     = ShowPasswordDialogAsync;
         _vm.FolderPickerRequested = ShowFolderPickerAsync;
         _vm.ShowProgressWindow    = ShowProgressWindow;
+        _vm.ExtractFlatRequested  = ExtractFlatAsync;
+
+        // Wire up drag-and-drop from the archive list
+        ArchiveListView.MouseMove += ArchiveListView_MouseMove;
+        ArchiveListView.MouseDown += ArchiveListView_MouseDown;
     }
 
     // ── Public helpers (called from App.xaml.cs for shell args) ──────────────
@@ -121,6 +130,65 @@ public partial class MainWindow : Window
                 ArchiveListView.SelectAll();
                 break;
         }
+    }
+
+    // ── Drag-and-drop from archive list to external destinations ───────────────
+
+    private Point _dragStartPoint;
+    private bool _isDragging = false;
+
+    private void ArchiveListView_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStartPoint = e.GetPosition(null);
+    }
+
+    private async void ArchiveListView_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _vm.SelectedEntries.Count == 0)
+            return;
+
+        var currentPoint = e.GetPosition(null);
+        var diff = _dragStartPoint - currentPoint;
+
+        // Check if the mouse has moved enough to start a drag operation
+        if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+            Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+        {
+            if (_isDragging) return;
+            _isDragging = true;
+
+            try
+            {
+                // Create a temporary directory for extraction
+                var tempDir = Path.Combine(Path.GetTempPath(), "Winpress_DragDrop_" + Path.GetRandomFileName());
+                Directory.CreateDirectory(tempDir);
+
+                // Extract the selected files to the temp directory
+                var extractedPaths = await _vm.ExtractSelectedToPathAsync(tempDir);
+
+                if (extractedPaths.Count == 0)
+                {
+                    try { Directory.Delete(tempDir, true); } catch { }
+                    _isDragging = false;
+                    return;
+                }
+
+                // Create a data object with the extracted file paths
+                var dataObject = new DataObject(DataFormats.FileDrop, extractedPaths.ToArray());
+
+                // Start the drag operation
+                DragDrop.DoDragDrop(ArchiveListView, dataObject, DragDropEffects.Copy | DragDropEffects.Move);
+            }
+            finally
+            {
+                _isDragging = false;
+            }
+        }
+    }
+
+    private Task<List<string>> ExtractFlatAsync(string archivePath, List<ArchiveEntry> selectedEntries, string destination)
+    {
+        return _extractionService.ExtractFlatAsync(archivePath, selectedEntries, destination);
     }
 
     // ── Column header sort ────────────────────────────────────────────────────
