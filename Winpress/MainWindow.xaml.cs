@@ -177,7 +177,7 @@ public partial class MainWindow : Window
                 }
 
                 // Create a data object with the extracted file paths
-                var dataObject = new DataObject(DataFormats.FileDrop, extractedPaths.ToArray());
+                var dataObject = new System.Windows.DataObject(System.Windows.DataFormats.FileDrop, extractedPaths.ToArray());
 
                 // Start the drag operation
                 DragDrop.DoDragDrop(ArchiveListView, dataObject, DragDropEffects.Copy | DragDropEffects.Move);

@@ -85,7 +85,7 @@ public class FileAssociationService
 
             // Remove from RegisteredApplications
             using var registeredApps = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\RegisteredApplications", writable: true);
-            registeredApps?.DeleteValue(AppName, throwOnMissingKey: false);
+            registeredApps?.DeleteValue(AppName, throwOnMissingValue: false);
         }
         catch
         {
@@ -222,5 +222,5 @@ public class FileAssociationService
     }
 
     private static string GetExePath() =>
-        Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Winpress.exe");
+        Environment.ProcessPath ?? System.IO.Path.Combine(AppContext.BaseDirectory, "Winpress.exe");
 }
