@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
@@ -84,7 +85,7 @@ public class FileAssociationService
 
             // Remove from RegisteredApplications
             using var registeredApps = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\RegisteredApplications", writable: true);
-            registeredApps?.DeleteValue(AppName, throwOnMissingSubKey: false);
+            registeredApps?.DeleteValue(AppName, throwOnMissingKey: false);
         }
         catch
         {

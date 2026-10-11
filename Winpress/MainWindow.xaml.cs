@@ -16,6 +16,7 @@ using OpenFileDialog  = Microsoft.Win32.OpenFileDialog;
 using MouseButtons    = System.Windows.Input.MouseButtonState;
 using Point           = System.Windows.Point;
 using MouseEventArgs  = System.Windows.Input.MouseEventArgs;
+using DataObject      = System.Windows.DataObject;
 
 namespace Winpress;
 

@@ -23,6 +23,7 @@
     <SignManifests>false</SignManifests>
     <ManifestCertificateThumbprint Condition="'$(CertificateThumbprint)' != ''">$(CertificateThumbprint)</ManifestCertificateThumbprint>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <!-- ── Publish settings (used by GitHub Actions release workflow) ──────── -->
