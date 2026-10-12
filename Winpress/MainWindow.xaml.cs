@@ -158,15 +158,22 @@ public partial class MainWindow : Window
 
     private Point _dragStartPoint;
     private bool _isDragging = false;
+    private List<ArchiveEntry> _dragStartSelection = new();
 
     private void ArchiveListView_MouseDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(null);
+        // Capture the selection BEFORE any selection change occurs.
+        // When the user clicks on a multi-selected item, WPF may fire SelectionChanged
+        // and reset the selection to just that single item. This capture prevents that.
+        _dragStartSelection = ArchiveListView.SelectedItems
+            .Cast<ArchiveEntry>()
+            .ToList();
     }
 
     private async void ArchiveListView_MouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || _vm.SelectedEntries.Count == 0)
+        if (e.LeftButton != MouseButtonState.Pressed || _dragStartSelection.Count == 0)
             return;
 
         var currentPoint = e.GetPosition(null);
@@ -185,8 +192,8 @@ public partial class MainWindow : Window
                 var tempDir = Path.Combine(Path.GetTempPath(), "Winpress_DragDrop_" + Path.GetRandomFileName());
                 Directory.CreateDirectory(tempDir);
 
-                // Extract ALL selected files to the temp directory
-                var extractedPaths = await _vm.ExtractSelectedToPathAsync(tempDir);
+                // Extract ALL selected files (from the captured selection) to the temp directory
+                var extractedPaths = await ExtractSelectionToPathAsync(tempDir, _dragStartSelection);
 
                 if (extractedPaths.Count == 0)
                 {
@@ -209,6 +216,19 @@ public partial class MainWindow : Window
                 _isDragging = false;
             }
         }
+    }
+
+    /// <summary>
+    /// Extracts a specific list of entries to a destination path (bypasses SelectedEntries).
+    /// Used for drag-and-drop to ensure all originally selected files are extracted,
+    /// even if WPF resets the ListView selection during the mouse operation.
+    /// </summary>
+    private Task<List<string>> ExtractSelectionToPathAsync(string destination, List<ArchiveEntry> entries)
+    {
+        if (_vm.ArchivePath == null || entries.Count == 0 || _vm.ExtractFlatRequested == null)
+            return Task.FromResult(new List<string>());
+
+        return _vm.ExtractFlatRequested(_vm.ArchivePath, entries, destination);
     }
 
     private Task<List<string>> ExtractFlatAsync(string archivePath, List<ArchiveEntry> selectedEntries, string destination)
