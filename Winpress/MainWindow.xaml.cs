@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -12,8 +13,8 @@ using Winpress.Views;
 
 // Explicit aliases — prevents ambiguity with System.Windows.Forms when UseWindowsForms=true
 // (Most are now defined globally in GlobalUsings.cs)
-using OpenFileDialog  = Microsoft.Win32.OpenFileDialog;
-using MouseButtons    = System.Windows.Input.MouseButtonState;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+using MouseButtons = System.Windows.Input.MouseButtonState;
 
 namespace Winpress;
 
@@ -37,24 +38,21 @@ public partial class MainWindow : Window
         _extractionService = extractionService;
 
         // Wire up events that require UI-layer dialogs
-        _vm.PasswordRequested     = ShowPasswordDialogAsync;
+        _vm.PasswordRequested = ShowPasswordDialogAsync;
         _vm.FolderPickerRequested = ShowFolderPickerAsync;
-        _vm.ShowProgressWindow    = ShowProgressWindow;
-        _vm.ExtractFlatRequested  = ExtractFlatAsync;
+        _vm.ShowProgressWindow = ShowProgressWindow;
+        _vm.ExtractFlatRequested = ExtractFlatAsync;
 
-        // Wire up drag-and-drop from the archive list.
-        // PreviewMouseLeftButtonDown is used instead of MouseDown to intercept clicks
-        // BEFORE WPF's internal selection logic runs. This is critical for multi-file
-        // drag-and-drop: it allows us to prevent WPF from deselecting other items when
-        // clicking on an already-selected item.
+        // Wire up mouse events for drag-and-drop and marquee selection
         ArchiveListView.PreviewMouseLeftButtonDown += ArchiveListView_PreviewMouseLeftButtonDown;
+        ArchiveListView.PreviewMouseLeftButtonUp += ArchiveListView_PreviewMouseLeftButtonUp;
         ArchiveListView.MouseMove += ArchiveListView_MouseMove;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        
+
         // Apply Windows 11 dark mode to the native title bar
         var handle = new WindowInteropHelper(this).Handle;
         int trueValue = 1;
@@ -85,7 +83,7 @@ public partial class MainWindow : Window
         if (path != null) _vm.OpenArchiveCommand.Execute(path);
     }
 
-    private void MenuExit_Click(object sender, RoutedEventArgs e)  => Close();
+    private void MenuExit_Click(object sender, RoutedEventArgs e) => Close();
 
     private void MenuAbout_Click(object sender, RoutedEventArgs e)
     {
@@ -102,7 +100,7 @@ public partial class MainWindow : Window
     private void MenuGitHub_Click(object sender, RoutedEventArgs e) =>
         OpenUrl("https://github.com/snipeem/Winpress");
 
-    // ── Drag & drop ───────────────────────────────────────────────────────────
+    // ── Drag & drop (file into window) ───────────────────────────────────────
 
     private void Window_DragOver(object sender, DragEventArgs e)
     {
@@ -152,38 +150,98 @@ public partial class MainWindow : Window
         }
     }
 
-    // ── Drag-and-drop from archive list to external destinations ───────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    //  DRAG-AND-DROP (from archive) + MARQUEE (rubber-band) SELECTION
+    //
+    //  Strategy:
+    //   • PreviewMouseLeftButtonDown — record the mouse position and take a
+    //     snapshot of the current selection.  If the click lands on empty
+    //     space, start a marquee and swallow the event; otherwise let WPF
+    //     handle selection naturally (this preserves double-click, unselect
+    //     on empty space, and normal click-to-select).
+    //   • MouseMove — if a marquee is active, update the rubber-band rectangle
+    //     and select intersecting items; otherwise, when the drag threshold is
+    //     exceeded, use the snapshot to start a shell drag operation.
+    //   • PreviewMouseLeftButtonUp — tear down the marquee if active.
+    // ═══════════════════════════════════════════════════════════════════════
 
-    private Point _dragStartPoint;
+    private Point _mouseDownPoint;
     private bool _isDragging = false;
-    private ArchiveEntry? _dragClickedEntry;
+    private List<ArchiveEntry>? _dragSelectionSnapshot;
+
+    // Marquee state
+    private bool _isMarqueeActive = false;
+    private Point _marqueeStartPoint;
+    private MarqueeAdorner? _marqueeAdorner;
+    private AdornerLayer? _adornerLayer;
 
     private void ArchiveListView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _dragStartPoint = e.GetPosition(null);
-        
-        // Hit test to find the clicked ListViewItem in the visual tree
+        _mouseDownPoint = e.GetPosition(null);
+        _isDragging = false;
+
+        // Snapshot the current selection BEFORE WPF processes the click.
+        // This guarantees that drag-and-drop uses the selection at click time,
+        // not whatever WPF may change it to during event bubbling.
+        _dragSelectionSnapshot = ArchiveListView.SelectedItems.Cast<ArchiveEntry>().ToList();
+
+        // Hit-test: is the click on an item or on empty space?
         var clickedElement = e.OriginalSource as DependencyObject;
         var listViewItem = FindAncestor<ListViewItem>(clickedElement);
-        _dragClickedEntry = listViewItem?.DataContext as ArchiveEntry;
-        
-        // If the clicked item is already part of the selection, prevent WPF from
-        // changing the selection. This is the key fix for multi-file drag-and-drop:
-        // without this, clicking on an already-selected item would deselect other
-        // selected items, breaking the ability to drag multiple files at once.
-        if (_dragClickedEntry != null && ArchiveListView.SelectedItems.Contains(_dragClickedEntry))
+
+        if (listViewItem == null)
         {
+            // ── Empty-space click → start marquee selection ────────────────
+            // Clear the existing selection unless Ctrl is held (additive mode).
+            if (Keyboard.Modifiers != ModifierKeys.Control)
+            {
+                ArchiveListView.SelectedItems.Clear();
+            }
+
+            StartMarquee(e.GetPosition(ArchiveListView));
+            ArchiveListView.CaptureMouse();
             e.Handled = true;
         }
+        // If clicked on an item we intentionally DO NOT set Handled=true.
+        // This allows WPF to handle:
+        //   • Normal click-to-select (single item)
+        //   • Ctrl+click toggle
+        //   • Shift+click range
+        //   • Double-click → MouseDoubleClick event (opens entry / nested archive)
+        //   • Click on empty space inside the ListView to clear the selection
+        // Setting Handled here would suppress all of those, which was the root
+        // cause of the previous bugs (double-click broken, couldn't unselect).
+    }
+
+    private void ArchiveListView_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_isMarqueeActive)
+        {
+            EndMarquee();
+            ArchiveListView.ReleaseMouseCapture();
+            e.Handled = true;
+        }
+        _dragSelectionSnapshot = null;
     }
 
     private async void ArchiveListView_MouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || _dragClickedEntry == null)
+        if (e.LeftButton != MouseButtonState.Pressed)
             return;
 
         var currentPoint = e.GetPosition(null);
-        var diff = _dragStartPoint - currentPoint;
+        var diff = _mouseDownPoint - currentPoint;
+
+        // ── Marquee update path ──────────────────────────────────────────
+        if (_isMarqueeActive)
+        {
+            UpdateMarquee(e.GetPosition(ArchiveListView));
+            return;
+        }
+
+        // ── Drag-and-drop path ─────────────────────────────────────────
+        if (_dragSelectionSnapshot == null || _dragSelectionSnapshot.Count == 0)
+            return;
 
         // Check if the mouse has moved enough to start a drag operation
         if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
@@ -194,18 +252,7 @@ public partial class MainWindow : Window
 
             try
             {
-                // At this point, SelectedItems contains the correct items:
-                // - If we clicked on an already-selected item, we prevented WPF
-                //   from changing the selection, so all selected items are preserved.
-                // - If we clicked on a non-selected item, WPF updated the selection
-                //   to contain only that item (standard behavior).
-                var entriesToDrag = ArchiveListView.SelectedItems.Cast<ArchiveEntry>().ToList();
-
-                if (entriesToDrag.Count == 0)
-                {
-                    _isDragging = false;
-                    return;
-                }
+                var entriesToDrag = _dragSelectionSnapshot;
 
                 // Create a temporary directory for extraction
                 var tempDir = Path.Combine(Path.GetTempPath(), "Winpress_DragDrop_" + Path.GetRandomFileName());
@@ -224,9 +271,9 @@ public partial class MainWindow : Window
                 // Create a data object with the extracted file paths
                 var dataObject = new DataObject(DataFormats.FileDrop, extractedPaths.ToArray());
 
-                // Start the drag operation
+                // Start the drag operation (blocks until drop or cancel)
                 DragDrop.DoDragDrop(ArchiveListView, dataObject, DragDropEffects.Copy | DragDropEffects.Move);
-                
+
                 // Clean up temp dir after drag completes
                 try { Directory.Delete(tempDir, true); } catch { }
             }
@@ -237,25 +284,89 @@ public partial class MainWindow : Window
         }
     }
 
+    // ── Marquee helpers ─────────────────────────────────────────────────────
+
+    private void StartMarquee(Point startPoint)
+    {
+        _isMarqueeActive = true;
+        _marqueeStartPoint = startPoint;
+
+        _adornerLayer = AdornerLayer.GetAdornerLayer(ArchiveListView);
+        if (_adornerLayer != null)
+        {
+            _marqueeAdorner = new MarqueeAdorner(ArchiveListView, startPoint, startPoint);
+            _adornerLayer.Add(_marqueeAdorner);
+        }
+    }
+
+    private void UpdateMarquee(Point currentPoint)
+    {
+        if (_marqueeAdorner != null)
+        {
+            _marqueeAdorner.UpdateRectangle(_marqueeStartPoint, currentPoint);
+            UpdateMarqueeSelection(_marqueeStartPoint, currentPoint);
+        }
+    }
+
+    private void EndMarquee()
+    {
+        _isMarqueeActive = false;
+        if (_adornerLayer != null && _marqueeAdorner != null)
+        {
+            _adornerLayer.Remove(_marqueeAdorner);
+            _marqueeAdorner = null;
+        }
+    }
+
     /// <summary>
-    /// Walks up the visual tree to find the first ancestor of type T.
-    /// Used to find the ListViewItem from a click on a child element.
+    /// Selects all realised (visible) ListViewItems whose bounds intersect the
+    /// marquee rectangle.  Virtualised items that aren't currently in the visual
+    /// tree are skipped — acceptable for typical archive sizes.
     /// </summary>
+    private void UpdateMarqueeSelection(Point start, Point end)
+    {
+        var marqueeRect = new Rect(
+            Math.Min(start.X, end.X),
+            Math.Min(start.Y, end.Y),
+            Math.Abs(end.X - start.X),
+            Math.Abs(end.Y - start.Y));
+
+        for (int i = 0; i < ArchiveListView.Items.Count; i++)
+        {
+            var container = ArchiveListView.ItemContainerGenerator.ContainerFromIndex(i) as ListViewItem;
+            if (container == null) continue; // Virtualised — not currently realised
+
+            var itemBounds = VisualTreeHelper.GetDescendantBounds(container);
+            var itemTopLeft = container.TranslatePoint(new Point(0, 0), ArchiveListView);
+            var itemRect = new Rect(itemTopLeft.X, itemTopLeft.Y, itemBounds.Width, itemBounds.Height);
+
+            if (marqueeRect.IntersectsWith(itemRect))
+            {
+                container.IsSelected = Keyboard.Modifiers == ModifierKeys.Control
+                    ? !container.IsSelected   // Ctrl: toggle
+                    : true;                    // Normal: select
+            }
+            else if (Keyboard.Modifiers != ModifierKeys.Control)
+            {
+                container.IsSelected = false;
+            }
+        }
+    }
+
+    // ── Visual tree helper ──────────────────────────────────────────────────
+
     private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
     {
         while (current != null)
         {
             if (current is T result) return result;
-            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            current = VisualTreeHelper.GetParent(current);
         }
         return null;
     }
 
-    /// <summary>
-    /// Extracts a specific list of entries to a destination path (bypasses SelectedEntries).
-    /// Used for drag-and-drop to ensure all originally selected files are extracted,
-    /// even if WPF resets the ListView selection during the mouse operation.
-    /// </summary>
+    // ── Extraction helpers for drag-and-drop ─────────────────────────────────
+
     private Task<List<string>> ExtractSelectionToPathAsync(string destination, List<ArchiveEntry> entries)
     {
         if (_vm.ArchivePath == null || entries.Count == 0 || _vm.ExtractFlatRequested == null)
@@ -328,7 +439,7 @@ public partial class MainWindow : Window
         // .NET 10 ships System.Windows.Forms; use the WinForms FolderBrowserDialog
         using var dlg = new System.Windows.Forms.FolderBrowserDialog
         {
-            Description         = prompt,
+            Description = prompt,
             UseDescriptionForTitle = true,
             ShowNewFolderButton = true
         };
@@ -349,7 +460,7 @@ public partial class MainWindow : Window
     {
         var dlg = new OpenFileDialog
         {
-            Title  = "Open Archive",
+            Title = "Open Archive",
             Filter =
                 "All Archives|*.zip;*.7z;*.rar;*.tar;*.gz;*.bz2;*.xz;*.tgz;*.tbz2;*.txz;" +
                 "*.lz4;*.zst;*.cab;*.iso;*.wim;*.deb;*.rpm;*.cpio;*.ar;*.arj|" +
@@ -371,10 +482,57 @@ public partial class MainWindow : Window
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName        = url,
+                FileName = url,
                 UseShellExecute = true
             });
         }
         catch { }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  MARQUEE ADORNER — draws the semi-transparent blue rubber-band
+    //  selection rectangle on top of the ListView.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private class MarqueeAdorner : Adorner
+    {
+        private Point _startPoint;
+        private Point _endPoint;
+        private readonly Pen _pen;
+        private readonly SolidColorBrush _fill;
+
+        public MarqueeAdorner(UIElement adornedElement, Point start, Point end)
+            : base(adornedElement)
+        {
+            _startPoint = start;
+            _endPoint = end;
+
+            // Windows 11 selection blue (#2B7FD4) with transparency
+            _pen = new Pen(new SolidColorBrush(Color.FromArgb(200, 43, 127, 212)), 1);
+            _pen.Freeze();
+            _fill = new SolidColorBrush(Color.FromArgb(40, 43, 127, 212));
+            _fill.Freeze();
+
+            IsHitTestVisible = false;
+        }
+
+        public void UpdateRectangle(Point start, Point end)
+        {
+            _startPoint = start;
+            _endPoint = end;
+            InvalidateVisual();
+        }
+
+        protected override void OnRender(DrawingContext drawingContext)
+        {
+            var rect = new Rect(
+                Math.Min(_startPoint.X, _endPoint.X),
+                Math.Min(_startPoint.Y, _endPoint.Y),
+                Math.Abs(_endPoint.X - _startPoint.X),
+                Math.Abs(_endPoint.Y - _startPoint.Y));
+
+            drawingContext.DrawRectangle(_fill, _pen, rect);
+            base.OnRender(drawingContext);
+        }
     }
 }
