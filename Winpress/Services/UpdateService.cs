@@ -152,37 +152,79 @@ public class UpdateService : IDisposable
             ?? Path.Combine(AppContext.BaseDirectory, "Winpress.exe");
 
         var scriptPath = Path.Combine(Path.GetTempPath(), "winpress_selfupdate.cmd");
+        var logPath    = Path.Combine(Path.GetTempPath(), "winpress_update.log");
 
-        // The script intentionally uses move (atomic on the same volume) and
-        // falls back gracefully if the destination is locked or on another drive.
+        // Get the current process ID so we can wait for it to fully exit
+        var currentPid = Environment.ProcessId;
+
+        // Build a robust update script that:
+        // 1. Waits for the current process to fully terminate
+        // 2. Attempts move first (atomic, fast)
+        // 3. Falls back to copy + delete if move fails (different volumes)
+        // 4. Logs all actions for debugging
+        // 5. Relaunches the updated binary
         var script = $"""
             @echo off
-            timeout /t 2 /nobreak > nul
-            move /y "{downloadedExePath}" "{currentExe}"
-            if errorlevel 1 (
-                echo Update could not be applied automatically.
-                echo Please close Winpress and manually replace:
-                echo   {downloadedExePath}
-                echo with:
-                echo   {currentExe}
-                pause
-                exit /b 1
+            echo Winpress Update Script >> "{logPath}"
+            echo Started at %date% %time% >> "{logPath}"
+            echo. >> "{logPath}"
+            
+            echo Waiting for Winpress (PID {currentPid}) to exit...
+            echo Waiting for PID {currentPid} to exit >> "{logPath}"
+            
+            :waitloop
+            tasklist /FI "PID eq {currentPid}" 2>nul | find "{currentPid}" >nul
+            if %errorlevel%==0 (
+                timeout /t 1 /nobreak >nul
+                goto waitloop
             )
+            
+            echo Process exited, applying update... >> "{logPath}"
+            echo Process exited, applying update...
+            
+            echo Attempting move operation >> "{logPath}"
+            move /y "{downloadedExePath}" "{currentExe}" >> "{logPath}" 2>&1
+            
+            if errorlevel 1 (
+                echo Move failed, attempting copy + delete >> "{logPath}"
+                echo Move failed, trying copy + delete...
+                copy /y "{downloadedExePath}" "{currentExe}" >> "{logPath}" 2>&1
+                if errorlevel 1 (
+                    echo. >> "{logPath}"
+                    echo UPDATE FAILED >> "{logPath}"
+                    echo Update could not be applied automatically.
+                    echo Please close Winpress and manually replace:
+                    echo   {downloadedExePath}
+                    echo with:
+                    echo   {currentExe}
+                    echo Check log at: {logPath}
+                    pause
+                    exit /b 1
+                )
+                del "{downloadedExePath}" >> "{logPath}" 2>&1
+            )
+            
+            echo Update applied successfully >> "{logPath}"
+            echo Relaunching Winpress...
             start "" "{currentExe}"
+            
+            echo Cleanup >> "{logPath}"
             del "%~f0"
             """;
 
         File.WriteAllText(scriptPath, script);
 
+        // Launch the script detached with UseShellExecute=false for proper window control
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
         {
-            FileName        = scriptPath,
-            UseShellExecute = true,
+            FileName        = "cmd.exe",
+            Arguments       = $"/c \"\"{scriptPath}\"\"",
+            UseShellExecute = false,
             WindowStyle     = System.Diagnostics.ProcessWindowStyle.Hidden,
             CreateNoWindow  = true
         });
 
-        // Shut down — the script will relaunch the updated binary.
+        // Shut down — the script will relaunch the updated binary
         System.Windows.Application.Current.Dispatcher.Invoke(
             () => System.Windows.Application.Current.Shutdown());
     }
