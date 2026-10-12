@@ -35,3 +35,13 @@ global using MessageBox      = System.Windows.MessageBox;
 global using DataObject      = System.Windows.DataObject;
 global using DataFormats     = System.Windows.DataFormats;
 global using DragDropEffects = System.Windows.DragDropEffects;
+
+// ── WPF Media/Drawing type aliases ────────────────────────────────────────────
+// Prevents CS0104 ambiguity with System.Drawing (e.g. Pen, Brush collide).
+global using Pen              = System.Windows.Media.Pen;
+global using Brush            = System.Windows.Media.Brush;
+global using SolidColorBrush  = System.Windows.Media.SolidColorBrush;
+global using DrawingContext   = System.Windows.Media.DrawingContext;
+global using Geometry         = System.Windows.Media.Geometry;
+global using Visual           = System.Windows.Media.Visual;
+global using Transform        = System.Windows.Media.Transform;
