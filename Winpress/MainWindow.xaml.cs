@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Microsoft.Win32;
 using Winpress.Models;
 using Winpress.ViewModels;
@@ -48,9 +49,13 @@ public partial class MainWindow : Window
         _vm.ShowProgressWindow    = ShowProgressWindow;
         _vm.ExtractFlatRequested  = ExtractFlatAsync;
 
-        // Wire up drag-and-drop from the archive list
+        // Wire up drag-and-drop from the archive list.
+        // PreviewMouseLeftButtonDown is used instead of MouseDown to intercept clicks
+        // BEFORE WPF's internal selection logic runs. This is critical for multi-file
+        // drag-and-drop: it allows us to prevent WPF from deselecting other items when
+        // clicking on an already-selected item.
+        ArchiveListView.PreviewMouseLeftButtonDown += ArchiveListView_PreviewMouseLeftButtonDown;
         ArchiveListView.MouseMove += ArchiveListView_MouseMove;
-        ArchiveListView.MouseDown += ArchiveListView_MouseDown;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -158,22 +163,30 @@ public partial class MainWindow : Window
 
     private Point _dragStartPoint;
     private bool _isDragging = false;
-    private List<ArchiveEntry> _dragStartSelection = new();
+    private ArchiveEntry? _dragClickedEntry;
 
-    private void ArchiveListView_MouseDown(object sender, MouseButtonEventArgs e)
+    private void ArchiveListView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(null);
-        // Capture the selection BEFORE any selection change occurs.
-        // When the user clicks on a multi-selected item, WPF may fire SelectionChanged
-        // and reset the selection to just that single item. This capture prevents that.
-        _dragStartSelection = ArchiveListView.SelectedItems
-            .Cast<ArchiveEntry>()
-            .ToList();
+        
+        // Hit test to find the clicked ListViewItem in the visual tree
+        var clickedElement = e.OriginalSource as DependencyObject;
+        var listViewItem = FindAncestor<ListViewItem>(clickedElement);
+        _dragClickedEntry = listViewItem?.DataContext as ArchiveEntry;
+        
+        // If the clicked item is already part of the selection, prevent WPF from
+        // changing the selection. This is the key fix for multi-file drag-and-drop:
+        // without this, clicking on an already-selected item would deselect other
+        // selected items, breaking the ability to drag multiple files at once.
+        if (_dragClickedEntry != null && ArchiveListView.SelectedItems.Contains(_dragClickedEntry))
+        {
+            e.Handled = true;
+        }
     }
 
     private async void ArchiveListView_MouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || _dragStartSelection.Count == 0)
+        if (e.LeftButton != MouseButtonState.Pressed || _dragClickedEntry == null)
             return;
 
         var currentPoint = e.GetPosition(null);
@@ -188,12 +201,25 @@ public partial class MainWindow : Window
 
             try
             {
+                // At this point, SelectedItems contains the correct items:
+                // - If we clicked on an already-selected item, we prevented WPF
+                //   from changing the selection, so all selected items are preserved.
+                // - If we clicked on a non-selected item, WPF updated the selection
+                //   to contain only that item (standard behavior).
+                var entriesToDrag = ArchiveListView.SelectedItems.Cast<ArchiveEntry>().ToList();
+
+                if (entriesToDrag.Count == 0)
+                {
+                    _isDragging = false;
+                    return;
+                }
+
                 // Create a temporary directory for extraction
                 var tempDir = Path.Combine(Path.GetTempPath(), "Winpress_DragDrop_" + Path.GetRandomFileName());
                 Directory.CreateDirectory(tempDir);
 
-                // Extract ALL selected files (from the captured selection) to the temp directory
-                var extractedPaths = await ExtractSelectionToPathAsync(tempDir, _dragStartSelection);
+                // Extract ALL selected files to the temp directory
+                var extractedPaths = await ExtractSelectionToPathAsync(tempDir, entriesToDrag);
 
                 if (extractedPaths.Count == 0)
                 {
@@ -216,6 +242,20 @@ public partial class MainWindow : Window
                 _isDragging = false;
             }
         }
+    }
+
+    /// <summary>
+    /// Walks up the visual tree to find the first ancestor of type T.
+    /// Used to find the ListViewItem from a click on a child element.
+    /// </summary>
+    private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
+    {
+        while (current != null)
+        {
+            if (current is T result) return result;
+            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+        }
+        return null;
     }
 
     /// <summary>

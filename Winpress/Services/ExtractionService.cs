@@ -139,6 +139,11 @@ public class ExtractionService
                 PreserveFileTime = true
             };
 
+            // Cache all archive entries once to avoid multiple iterations of the archive stream.
+            // Some archive formats in SharpCompress use lazy evaluation and can only be
+            // enumerated once, so we materialize the list upfront.
+            var allArchiveEntries = archive.Entries.ToList();
+
             foreach (var entry in entriesToExtract)
             {
                 ct.ThrowIfCancellationRequested();
@@ -147,7 +152,7 @@ public class ExtractionService
                 // For single file extraction
                 if (!entry.IsDirectory)
                 {
-                    var archiveEntry = archive.Entries
+                    var archiveEntry = allArchiveEntries
                         .FirstOrDefault(e => !e.IsDirectory &&
                             (e.Key ?? string.Empty).Replace('\\', '/').Equals(filterPrefix, StringComparison.OrdinalIgnoreCase));
 
@@ -166,7 +171,7 @@ public class ExtractionService
                     var folderPath = Path.Combine(destination, entry.Name);
                     Directory.CreateDirectory(folderPath);
 
-                    var childEntries = archive.Entries
+                    var childEntries = allArchiveEntries
                         .Where(e => (e.Key ?? string.Empty).Replace('\\', '/').StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                         .ToList();
 
