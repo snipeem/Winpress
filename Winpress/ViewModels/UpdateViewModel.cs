@@ -79,8 +79,17 @@ public partial class UpdateViewModel : ObservableObject
     private void ApplyUpdate()
     {
         if (_downloadedPath is null) return;
-        StatusText = "Applying update and restarting…";
-        _service.ApplyUpdate(_downloadedPath);
+        
+        try
+        {
+            StatusText = "Applying update and restarting…";
+            _service.ApplyUpdate(_downloadedPath);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to apply update: {ex.Message}";
+            HasFailed = true;
+        }
     }
 
     [RelayCommand]
@@ -103,5 +112,16 @@ public partial class UpdateViewModel : ObservableObject
     {
         // GitHub release bodies use Markdown — show as-is in the text box.
         return string.IsNullOrWhiteSpace(raw) ? "No changelog provided." : raw.Trim();
+    }
+
+    // ── Property changed handlers to manually notify commands ─────────────────
+    partial void OnIsReadyToApplyChanged(bool value)
+    {
+        ApplyUpdateCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsIdleChanged(bool value)
+    {
+        UpdateNowCommand.NotifyCanExecuteChanged();
     }
 }

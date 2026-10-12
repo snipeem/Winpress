@@ -123,6 +123,7 @@ public partial class MainViewModel : ObservableObject
             CurrentInternalPath = entry.FullPath;
             RefreshDisplayEntries();
             UpdateBreadcrumbs();
+            NavigateBackCommand.NotifyCanExecuteChanged();
         }
         else if (entry.IsNestedArchive)
         {
@@ -142,6 +143,7 @@ public partial class MainViewModel : ObservableObject
         CurrentInternalPath = item.Path;
         RefreshDisplayEntries();
         UpdateBreadcrumbs();
+        NavigateBackCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateBack))]
@@ -196,7 +198,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (ArchivePath == null || SelectedEntries.Count == 0) return;
         var dest = FolderPickerRequested is not null
-            ? await FolderPickerRequested("Extract selected files to\u2026")
+            ? await FolderPickerRequested("Extract selected files to…")
             : null;
         if (dest == null) return;
         await RunExtractionAsync(dest, extractAll: false);
@@ -317,7 +319,7 @@ public partial class MainViewModel : ObservableObject
                         return;
                     }
                 }
-                StatusText   = "Archive requires a password.";
+                StatusText   = "Archive required a password.";
                 ErrorMessage = "This archive is password-protected.";
                 return;
             }
@@ -343,6 +345,8 @@ public partial class MainViewModel : ObservableObject
         {
             IsLoading = false;
             NavigateBackCommand.NotifyCanExecuteChanged();
+            ExtractAllCommand.NotifyCanExecuteChanged();
+            ExtractSelectedCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -372,6 +376,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+            NavigateBackCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -565,6 +570,23 @@ public partial class MainViewModel : ObservableObject
     }
 
     private static string Pl(int n) => n == 1 ? string.Empty : "s";
+
+    // ── Property changed handlers to manually notify commands ─────────────────
+    partial void OnSelectedEntriesChanged(List<ArchiveEntry> value)
+    {
+        ExtractSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnCurrentInternalPathChanged(string value)
+    {
+        NavigateBackCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnHasArchiveChanged(bool value)
+    {
+        ExtractAllCommand.NotifyCanExecuteChanged();
+        ExtractSelectedCommand.NotifyCanExecuteChanged();
+    }
 }
 
 // ── Tiny VM for the progress window ──────────────────────────────────────────

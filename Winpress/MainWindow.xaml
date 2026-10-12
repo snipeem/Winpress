@@ -57,7 +57,7 @@
              MENU BAR
              ═══════════════════════════════════════════════════ -->
         <Menu Grid.Row="0" Background="#FF1F1F1F" Foreground="White" Padding="4,2">
-            <MenuItem Header="_File" Foreground="White">
+            <MenuItem Header="_File" Style="{StaticResource TopLevelMenuItemStyle}">
                 <MenuItem Header="Open Archive…"    Click="MenuOpen_Click"
                           InputGestureText="Ctrl+O"/>
                 <Separator/>
@@ -71,7 +71,7 @@
                 <MenuItem Header="_Exit"            Click="MenuExit_Click"
                           InputGestureText="Alt+F4"/>
             </MenuItem>
-            <MenuItem Header="_View" Foreground="White">
+            <MenuItem Header="_View" Style="{StaticResource TopLevelMenuItemStyle}">
                 <MenuItem Header="Navigate Back"
                           Command="{Binding NavigateBackCommand}"
                           InputGestureText="Alt+←"/>
@@ -81,7 +81,7 @@
                 <MenuItem Header="Sort by _Modified" Command="{Binding SortByCommand}" CommandParameter="Modified"/>
                 <MenuItem Header="Sort by _Type"     Command="{Binding SortByCommand}" CommandParameter="Type"/>
             </MenuItem>
-            <MenuItem Header="_Tools" Foreground="White">
+            <MenuItem Header="_Tools" Style="{StaticResource TopLevelMenuItemStyle}">
                 <MenuItem Header="Register Explorer Context Menus"
                           Command="{Binding ToggleShellIntegrationCommand}"
                           IsCheckable="True"
@@ -93,7 +93,7 @@
                           Command="{Binding RemoveDefaultCommand}"
                           IsEnabled="{Binding FileAssociationEnabled, Mode=OneWay}"/>
             </MenuItem>
-            <MenuItem Header="_Help" Foreground="White">
+            <MenuItem Header="_Help" Style="{StaticResource TopLevelMenuItemStyle}">
                 <MenuItem Header="About Winpress" Click="MenuAbout_Click"/>
                 <MenuItem Header="View on GitHub"  Click="MenuGitHub_Click"/>
             </MenuItem>
@@ -163,7 +163,7 @@
                                FontSize="13" Foreground="#9A9A9A" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBox Style="{StaticResource SearchBoxStyle}"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             Width="200" Height="30"
+                             Width="220" Height="32"
                              ToolTip="Search files in archive"/>
                 </StackPanel>
 

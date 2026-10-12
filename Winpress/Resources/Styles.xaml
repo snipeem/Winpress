@@ -162,7 +162,7 @@
         <Setter Property="Background"       Value="Transparent"/>
         <Setter Property="Foreground"       Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="BorderThickness"  Value="0"/>
-        <Setter Property="Padding"          Value="8,6"/>
+        <Setter Property="Padding"          Value="8,8"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -242,28 +242,54 @@
     <!-- ═══════════════════════════════════════════════════════
          TEXT BOX (search)
          ═══════════════════════════════════════════════════════ -->
+    <!-- Custom template: guarantees the text is vertically centred inside the field
+         regardless of the fixed Height applied at the call-site (like File Explorer).
+         FontSize 14 and height 32 match the Windows 11 File Explorer search bar. -->
     <Style x:Key="SearchBoxStyle" TargetType="TextBox">
         <Setter Property="Background"       Value="{StaticResource SurfaceBrush}"/>
         <Setter Property="Foreground"       Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="CaretBrush"       Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="SelectionBrush"   Value="{StaticResource AccentBrush}"/>
         <Setter Property="BorderBrush"      Value="{StaticResource BorderBrush}"/>
         <Setter Property="BorderThickness"  Value="1"/>
-        <Setter Property="Padding"          Value="8,5"/>
-        <Setter Property="FontSize"         Value="12"/>
+        <Setter Property="Padding"          Value="12,0,12,0"/>
+        <Setter Property="FontSize"         Value="14"/>
+        <Setter Property="FontFamily"       Value="Segoe UI"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Border Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="4"
-                            Padding="{TemplateBinding Padding}">
-                        <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                            CornerRadius="6"
+                            SnapsToDevicePixels="True"
+                            Height="{TemplateBinding Height}"
+                            Width="{TemplateBinding Width}">
+                        <!-- PART_ContentHost is the magic name WPF requires for the
+                             text-editing surface. Centring the ScrollViewer vertically
+                             inside the Border, with no vertical padding, ensures the
+                             typed text sits exactly in the middle of the field. -->
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      VerticalAlignment="Center"
+                                      VerticalContentAlignment="Center"
+                                      Margin="{TemplateBinding Padding}"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsFocused" Value="True">
+                        <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="Background"  Value="{StaticResource HoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="Background"  Value="{StaticResource SurfaceBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -313,10 +339,84 @@
         <Setter Property="FontSize"    Value="13"/>
         <Setter Property="FontFamily"  Value="Segoe UI"/>
     </Style>
+
+    <!-- Base MenuItem style for dark theme -->
     <Style TargetType="MenuItem">
-        <Setter Property="Background"  Value="{StaticResource PanelBrush}"/>
-        <Setter Property="Foreground"  Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="FontSize"    Value="13"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderThickness="0"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="Icon"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="Shortcut"/>
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter x:Name="Icon" Content="{TemplateBinding Icon}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ContentPresenter Grid.Column="1" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource HoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Top-level MenuItem (File, View, etc.) -->
+    <Style TargetType="MenuItem" x:Key="TopLevelMenuItemStyle" BasedOn="{StaticResource {x:Type MenuItem}}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="border" Background="Transparent" Padding="12,6">
+                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource HoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSubmenuOpen" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource SurfaceBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ContextMenu style (fix white borders) -->
+    <Style TargetType="ContextMenu">
+        <Setter Property="Background" Value="#FF2D2D2D"/>
+        <Setter Property="BorderBrush" Value="#FF3C3C3C"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="0,4"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}">
+                        <ItemsPresenter/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
 </ResourceDictionary>

@@ -1,11 +1,14 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using Microsoft.Win32;
 using Winpress.Models;
 using Winpress.ViewModels;
 using Winpress.Views;
+
 // Explicit aliases — prevents ambiguity with System.Windows.Forms when UseWindowsForms=true
 using DragEventArgs   = System.Windows.DragEventArgs;
 using KeyEventArgs    = System.Windows.Input.KeyEventArgs;
@@ -25,6 +28,12 @@ public partial class MainWindow : Window
     private readonly MainViewModel _vm;
     private readonly Winpress.Services.ExtractionService _extractionService;
 
+    // ── DWM API for dark title bar ─────────────────────────────────────────
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+    private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
     // ── Construction ─────────────────────────────────────────────────────────
 
     public MainWindow(MainViewModel vm, Winpress.Services.ExtractionService extractionService)
@@ -42,6 +51,16 @@ public partial class MainWindow : Window
         // Wire up drag-and-drop from the archive list
         ArchiveListView.MouseMove += ArchiveListView_MouseMove;
         ArchiveListView.MouseDown += ArchiveListView_MouseDown;
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        
+        // Apply Windows 11 dark mode to the native title bar
+        var handle = new WindowInteropHelper(this).Handle;
+        int trueValue = 1;
+        DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref trueValue, sizeof(int));
     }
 
     // ── Public helpers (called from App.xaml.cs for shell args) ──────────────
@@ -166,7 +185,7 @@ public partial class MainWindow : Window
                 var tempDir = Path.Combine(Path.GetTempPath(), "Winpress_DragDrop_" + Path.GetRandomFileName());
                 Directory.CreateDirectory(tempDir);
 
-                // Extract the selected files to the temp directory
+                // Extract ALL selected files to the temp directory
                 var extractedPaths = await _vm.ExtractSelectedToPathAsync(tempDir);
 
                 if (extractedPaths.Count == 0)
@@ -177,10 +196,13 @@ public partial class MainWindow : Window
                 }
 
                 // Create a data object with the extracted file paths
-                var dataObject = new System.Windows.DataObject(System.Windows.DataFormats.FileDrop, extractedPaths.ToArray());
+                var dataObject = new DataObject(DataFormats.FileDrop, extractedPaths.ToArray());
 
                 // Start the drag operation
                 DragDrop.DoDragDrop(ArchiveListView, dataObject, DragDropEffects.Copy | DragDropEffects.Move);
+                
+                // Clean up temp dir after drag completes
+                try { Directory.Delete(tempDir, true); } catch { }
             }
             finally
             {
