@@ -252,7 +252,7 @@
         <Setter Property="SelectionBrush"   Value="{StaticResource AccentBrush}"/>
         <Setter Property="BorderBrush"      Value="{StaticResource BorderBrush}"/>
         <Setter Property="BorderThickness"  Value="1"/>
-        <Setter Property="Padding"          Value="12,0,12,0"/>
+        <Setter Property="Padding"          Value="8,0,8,0"/>
         <Setter Property="FontSize"         Value="14"/>
         <Setter Property="FontFamily"       Value="Segoe UI"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -360,7 +360,11 @@
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="Shortcut"/>
                             </Grid.ColumnDefinitions>
                             <ContentPresenter x:Name="Icon" Content="{TemplateBinding Icon}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <ContentPresenter Grid.Column="1" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}" VerticalAlignment="Center"/>
+                            <ContentPresenter Grid.Column="1" 
+                                              ContentSource="Header" 
+                                              RecognizesAccessKey="True"
+                                              ContentTemplate="{TemplateBinding HeaderTemplate}" 
+                                              VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="16,0,0,0"/>
                         </Grid>
                     </Border>
@@ -383,7 +387,26 @@
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
                     <Border x:Name="border" Background="Transparent" Padding="12,6">
-                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center"/>
+                        <Grid>
+                            <ContentPresenter ContentSource="Header" 
+                                              RecognizesAccessKey="True"
+                                              VerticalAlignment="Center"/>
+                            <Popup x:Name="PART_Popup"
+                                   IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Placement="Bottom"
+                                   PlacementTarget="{Binding ElementName=border}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Fade">
+                                <Border Background="{StaticResource PanelBrush}"
+                                        BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="0,4">
+                                    <ItemsPresenter/>
+                                </Border>
+                            </Popup>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">

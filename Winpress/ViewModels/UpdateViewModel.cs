@@ -37,7 +37,7 @@ public partial class UpdateViewModel : ObservableObject
     // ── Commands ──────────────────────────────────────────────────────────────
 
     /// <summary>Downloads the update binary and then applies it.</summary>
-    [RelayCommand(CanExecute = nameof(IsIdle))]
+    [RelayCommand(CanExecute = nameof(CanUpdateNow))]
     private async Task UpdateNowAsync()
     {
         IsIdle        = false;
@@ -71,11 +71,13 @@ public partial class UpdateViewModel : ObservableObject
         }
     }
 
+    private bool CanUpdateNow() => IsIdle;
+
     /// <summary>
     /// Replaces the running .exe and restarts the app.
     /// Only available after a successful download.
     /// </summary>
-    [RelayCommand(CanExecute = nameof(IsReadyToApply))]
+    [RelayCommand(CanExecute = nameof(CanApplyUpdate))]
     private void ApplyUpdate()
     {
         if (_downloadedPath is null) return;
@@ -91,6 +93,8 @@ public partial class UpdateViewModel : ObservableObject
             HasFailed = true;
         }
     }
+
+    private bool CanApplyUpdate() => IsReadyToApply;
 
     [RelayCommand]
     private void Dismiss() => CloseRequested?.Invoke();
@@ -121,6 +125,11 @@ public partial class UpdateViewModel : ObservableObject
     }
 
     partial void OnIsIdleChanged(bool value)
+    {
+        UpdateNowCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsDownloadingChanged(bool value)
     {
         UpdateNowCommand.NotifyCanExecuteChanged();
     }

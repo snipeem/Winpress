@@ -298,7 +298,7 @@ public partial class MainViewModel : ObservableObject
     //  INTERNAL HELPERS
     // ══════════════════════════════════════════════════════════════════════════
 
-    private async Task LoadArchiveInternalAsync(string path, string? password = null)
+    private async Task LoadArchiveInternalAsync(string path, string? password = null, bool clearStack = true)
     {
         IsLoading    = true;
         ErrorMessage = null;
@@ -315,7 +315,7 @@ public partial class MainViewModel : ObservableObject
                     var pwd = await PasswordRequested(path);
                     if (pwd != null)
                     {
-                        await LoadArchiveInternalAsync(path, pwd);
+                        await LoadArchiveInternalAsync(path, pwd, clearStack);
                         return;
                     }
                 }
@@ -332,7 +332,8 @@ public partial class MainViewModel : ObservableObject
             }
 
             _allEntries         = result.Entries;
-            _nestedStack.Clear();
+            if (clearStack)
+                _nestedStack.Clear();
             ArchivePath         = path;
             ArchiveName         = Path.GetFileName(path);
             CurrentInternalPath = string.Empty;
@@ -370,8 +371,8 @@ public partial class MainViewModel : ObservableObject
             // Push current state
             _nestedStack.Push((ArchivePath!, null, CurrentInternalPath, _allEntries));
 
-            // Load the inner archive
-            await LoadArchiveInternalAsync(extracted);
+            // Load the inner archive (don't clear the stack — we just pushed to it)
+            await LoadArchiveInternalAsync(extracted, clearStack: false);
         }
         finally
         {
