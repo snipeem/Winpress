@@ -13,7 +13,6 @@ using Winpress.Views;
 
 // Explicit aliases — prevents ambiguity with System.Windows.Forms when UseWindowsForms=true
 // (Most are now defined globally in GlobalUsings.cs)
-using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using MouseButtons = System.Windows.Input.MouseButtonState;
 
 namespace Winpress;
