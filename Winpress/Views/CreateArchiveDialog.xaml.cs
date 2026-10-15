@@ -133,7 +133,7 @@ public partial class CreateArchiveDialog : Window
         var ext  = fmt.ToExtension();
         var dir  = Path.GetDirectoryName(OutputPathBox.Text) ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
         var name = StripArchiveExtension(Path.GetFileNameWithoutExtension(
-                       Path.GetFileName(OutputPathBox.Text)) ?? string.Empty);
+                       Path.GetFileName(OutputPathBox.Text) ?? string.Empty) ?? string.Empty);
 
         var dlg = new SaveFileDialog
         {

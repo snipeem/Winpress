@@ -49,3 +49,4 @@ global using Transform        = System.Windows.Media.Transform;
 // ── Additional aliases ────────────────────────────────────────────────────────
 global using Key              = System.Windows.Input.Key;
 global using SaveFileDialog   = Microsoft.Win32.SaveFileDialog;
+global using OpenFileDialog   = Microsoft.Win32.OpenFileDialog;
