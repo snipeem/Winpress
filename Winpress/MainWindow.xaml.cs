@@ -94,7 +94,8 @@ public partial class MainWindow : Window
     {
         var dialog = new Winpress.Views.CreateArchiveDialog(
             suggestedOutputPath: args.SuggestedPath,
-            sourceDescription:   args.Description)
+            sourceDescription:   args.Description,
+            initialSources:      args.Sources)
         {
             Owner = this
         };

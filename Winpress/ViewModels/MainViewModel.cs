@@ -295,9 +295,15 @@ public partial class MainViewModel : ObservableObject
     public void ToggleShellIntegration()
     {
         if (ShellIntegrationEnabled)
+        {
             ShellIntegrationService.Unregister();
+            StatusText = "Explorer context menus removed.";
+        }
         else
+        {
             ShellIntegrationService.Register();
+            StatusText = "Explorer context menus registered. Right-click any file to see Winpress options.";
+        }
 
         ShellIntegrationEnabled = ShellIntegrationService.IsRegistered();
     }
@@ -340,7 +346,7 @@ public partial class MainViewModel : ObservableObject
 
         var description = sources.Count switch
         {
-            0 => "No sources selected",
+            0 => "Select files or folders to compress",
             1 => $"Compressing: {Path.GetFileName(sources[0])}",
             _ => $"Compressing {sources.Count} items"
         };
@@ -348,8 +354,11 @@ public partial class MainViewModel : ObservableObject
         var result = await CreateArchiveRequested((sources, suggested, description));
         if (result == null) return;
 
+        // Use the source paths from the dialog result (user may have added/removed files)
+        var finalSources = result.SourcePaths.Count > 0 ? result.SourcePaths : sources;
+
         await RunCompressionAsync(
-            sources,
+            finalSources,
             result.OutputPath,
             new CompressionOptions(result.Format, result.Password, result.Level));
     }

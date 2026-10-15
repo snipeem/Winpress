@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
 namespace Winpress.Services;
@@ -13,11 +14,19 @@ namespace Winpress.Services;
 ///   • "Open with Winpress"   — opens the archive browser
 ///   • "Extract Here"          — extracts in the same folder
 ///   • "Extract to Folder…"    — shows a folder picker, then extracts
+///   • "Compress to ZIP/7z/…"  — creates archives in various formats
 /// </summary>
 public class ShellIntegrationService
 {
     private const string AppName    = "Winpress";
     private const string HkcuRoot   = @"SOFTWARE\Classes";
+
+    // Shell change notification constants
+    private const int SHCNE_ASSOCCHANGED = 0x08000000;
+    private const int SHCNF_IDLIST       = 0x0000;
+
+    [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern void SHChangeNotify(int eventId, int flags, IntPtr item1, IntPtr item2);
 
     private static readonly string[] Extensions =
     {
@@ -35,7 +44,7 @@ public class ShellIntegrationService
     /// </summary>
     public static void Register()
     {
-        var exePath = Environment.ProcessPath ?? GetExePath();
+        var exePath = GetExecutablePath();
         foreach (var ext in Extensions)
             RegisterForExtension(ext, exePath);
 
@@ -44,6 +53,9 @@ public class ShellIntegrationService
 
         // Register "Compress with Winpress" on FOLDER right-click
         RegisterForDirectory(exePath);
+
+        // Notify Explorer to refresh its context menu cache
+        RefreshExplorerCache();
     }
 
     private static void RegisterForAllFiles(string exePath)
@@ -166,6 +178,9 @@ public class ShellIntegrationService
         TryDelete($@"{HkcuRoot}\*\shell\{AppName}");
         TryDelete($@"{HkcuRoot}\Directory\shell\{AppName}");
         TryDelete($@"{HkcuRoot}\Directory\Background\shell\{AppName}");
+
+        // Notify Explorer to refresh its context menu cache
+        RefreshExplorerCache();
     }
 
     private static void TryDelete(string key)
@@ -191,6 +206,35 @@ public class ShellIntegrationService
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static string GetExePath() =>
-        Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Winpress.exe");
+    /// <summary>
+    /// Gets the path to the Winpress executable.
+    /// For single-file self-contained apps, Environment.ProcessPath returns the correct path.
+    /// Falls back to AppContext.BaseDirectory + "Winpress.exe" if needed.
+    /// </summary>
+    private static string GetExecutablePath()
+    {
+        // Environment.ProcessPath works for both regular and single-file deployments
+        var path = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            return path;
+
+        // Fallback for edge cases
+        return Path.Combine(AppContext.BaseDirectory, "Winpress.exe");
+    }
+
+    /// <summary>
+    /// Notifies Windows Explorer to refresh its context menu cache.
+    /// This is required for newly registered context menu items to appear.
+    /// </summary>
+    private static void RefreshExplorerCache()
+    {
+        try
+        {
+            SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, IntPtr.Zero, IntPtr.Zero);
+        }
+        catch
+        {
+            // Best-effort — if this fails, user may need to restart Explorer or log out/in
+        }
+    }
 }

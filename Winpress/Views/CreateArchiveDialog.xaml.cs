@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -12,7 +13,8 @@ public record CreateArchiveResult(
     string                 OutputPath,
     CompressionFormat      Format,
     string?                Password,
-    ArchiveCompressionLevel Level
+    ArchiveCompressionLevel Level,
+    IReadOnlyList<string>  SourcePaths
 );
 
 /// <summary>
@@ -27,12 +29,16 @@ public partial class CreateArchiveDialog : Window
     private bool _showPassword = false;
     private bool _showConfirm  = false;
 
+    // Source paths selected by the user
+    private readonly List<string> _sourcePaths = new();
+
     // Strength levels
     private enum Strength { Empty, Weak, Fair, Strong }
 
     public CreateArchiveDialog(
         string? suggestedOutputPath = null,
-        string? sourceDescription   = null)
+        string? sourceDescription   = null,
+        IReadOnlyList<string>? initialSources = null)
     {
         InitializeComponent();
 
@@ -41,12 +47,85 @@ public partial class CreateArchiveDialog : Window
         if (!string.IsNullOrWhiteSpace(sourceDescription))
             SourceLabel.Text = sourceDescription;
 
+        // Pre-fill sources if provided
+        if (initialSources != null && initialSources.Count > 0)
+        {
+            _sourcePaths.AddRange(initialSources);
+            UpdateSourceDisplay();
+        }
+
         UpdatePanelVisibility();
         UpdateStrengthIndicator();
         UpdateAesBadge();
     }
 
     // ── Interaction ──────────────────────────────────────────────────────────
+
+    private void AddFiles_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = "Select files to compress",
+            Multiselect = true,
+            Filter = "All files|*.*"
+        };
+
+        if (dlg.ShowDialog(this) == true)
+        {
+            _sourcePaths.AddRange(dlg.FileNames);
+            UpdateSourceDisplay();
+            UpdateSuggestedOutputPath();
+        }
+    }
+
+    private void AddFolder_Click(object sender, RoutedEventArgs e)
+    {
+        // Use FolderBrowserDialog from System.Windows.Forms
+        using var dlg = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "Select folder to compress",
+            UseDescriptionForTitle = true
+        };
+
+        if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            _sourcePaths.Add(dlg.SelectedPath);
+            UpdateSourceDisplay();
+            UpdateSuggestedOutputPath();
+        }
+    }
+
+    private void UpdateSourceDisplay()
+    {
+        if (_sourcePaths.Count == 0)
+        {
+            SourcePathBox.Text = string.Empty;
+            SourceLabel.Text = "Select files or folders to compress";
+        }
+        else if (_sourcePaths.Count == 1)
+        {
+            SourcePathBox.Text = _sourcePaths[0];
+            SourceLabel.Text = $"Compressing: {Path.GetFileName(_sourcePaths[0])}";
+        }
+        else
+        {
+            SourcePathBox.Text = string.Join("; ", _sourcePaths);
+            SourceLabel.Text = $"Compressing {_sourcePaths.Count} items";
+        }
+    }
+
+    private void UpdateSuggestedOutputPath()
+    {
+        if (_sourcePaths.Count == 1 && string.IsNullOrWhiteSpace(OutputPathBox.Text))
+        {
+            var src = _sourcePaths[0];
+            var dir = Path.GetDirectoryName(src) ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var name = Path.GetFileNameWithoutExtension(src);
+            if (Directory.Exists(src))
+                name = Path.GetFileName(src); // folder name
+            OutputPathBox.Text = Path.Combine(dir, name + ".zip");
+        }
+    }
 
     private void Browse_Click(object sender, RoutedEventArgs e)
     {
@@ -62,9 +141,7 @@ public partial class CreateArchiveDialog : Window
             FileName         = string.IsNullOrEmpty(name) ? "archive" : name,
             DefaultExt       = ext,
             Filter           = BuildFilter(fmt),
-            InitialDirectory = (dir != null && Directory.Exists(dir))
-                               ? dir
-                               : Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+            InitialDirectory = Directory.Exists(dir) ? dir : Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
         };
 
         if (dlg.ShowDialog(this) == true)
@@ -154,6 +231,12 @@ public partial class CreateArchiveDialog : Window
     {
         ErrorLabel.Visibility = Visibility.Collapsed;
 
+        if (_sourcePaths.Count == 0)
+        {
+            ShowError("Please add at least one file or folder to compress.");
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(OutputPathBox.Text))
         {
             ShowError("Please specify an output file path.");
@@ -182,7 +265,8 @@ public partial class CreateArchiveDialog : Window
             OutputPath : OutputPathBox.Text.Trim(),
             Format     : fmt,
             Password   : fmt.SupportsPassword() && pwd.Length > 0 ? pwd : null,
-            Level      : level
+            Level      : level,
+            SourcePaths: _sourcePaths.ToList()
         );
 
         DialogResult = true;

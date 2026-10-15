@@ -40,7 +40,16 @@ Open and browse 40+ archive formats like folders, extract exactly what you need,
 no installer, no runtime, no admin rights.
 
 <details open>
-<summary><b>✨ What's new in v1.2.0</b></summary>
+<summary><b>✨ What's new in v1.2.1</b></summary>
+
+- **UI Polish** — Fixed ComboBox dropdown styling (white text on dark background) and CTA button heights across all dialogs
+- **Improved Compress Flow** — Create Archive dialog now includes a built-in source file/folder picker
+- **Context Menu Refresh** — Explorer context menus now update instantly via `SHChangeNotify` without requiring an Explorer restart
+- **Status Feedback** — "Register Explorer Context Menu" now shows a confirmation message in the status bar
+</details>
+
+<details>
+<summary><b>📦 What's new in v1.2.0</b></summary>
 
 - **Compression** — Create ZIP, 7z, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST, TAR, GZip, BZip2, and Zstandard archives
 - **AES-256 encryption** — Password-protect ZIP and 7z archives with WinZip-standard AES-256
