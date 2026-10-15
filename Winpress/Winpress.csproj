@@ -11,14 +11,14 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>Winpress</RootNamespace>
     <AssemblyName>Winpress</AssemblyName>
-    <Version>1.1.6</Version>
-    <AssemblyVersion>1.1.6.0</AssemblyVersion>
-    <FileVersion>1.1.6.0</FileVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
     <Product>Winpress</Product>
     <Company>snipeem</Company>
-    <Description>The archive manager Windows should have shipped with. Browse, preview and extract 40+ formats.</Description>
+    <Description>The archive manager Windows should have shipped with. Browse, preview, extract and compress 40+ formats with AES-256 encryption.</Description>
     <Copyright>Copyright © snipeem</Copyright>
-    <InformationalVersion>1.1.6</InformationalVersion>
+    <InformationalVersion>1.2.0</InformationalVersion>
     <!-- Code signing: Set to your certificate thumbprint or leave empty for unsigned builds -->
     <SignManifests>false</SignManifests>
     <ManifestCertificateThumbprint Condition="'$(CertificateThumbprint)' != ''">$(CertificateThumbprint)</ManifestCertificateThumbprint>
@@ -33,6 +33,8 @@
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
     <EnableCompressionInSingleFile Condition="'$(SelfContained)' == 'true'">true</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- R2R: pre-JIT native code baked in → ~40% faster cold launch on first run -->
+    <PublishReadyToRun Condition="'$(PublishSingleFile)' == 'true'">true</PublishReadyToRun>
 
     <!-- Trim unused code to reduce binary size (safe for WPF in .NET 10) -->
     <PublishTrimmed Condition="'$(PublishSingleFile)' == 'true'">false</PublishTrimmed>

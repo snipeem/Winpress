@@ -19,8 +19,9 @@ namespace Winpress.ViewModels;
 /// </summary>
 public partial class MainViewModel : ObservableObject
 {
-    private readonly ArchiveService    _archiveService;
-    private readonly ExtractionService _extractionService;
+    private readonly ArchiveService     _archiveService;
+    private readonly ExtractionService  _extractionService;
+    private readonly CompressionService _compressionService;
 
     // All entries flat-loaded from the current (outermost or nested) archive
     private List<ArchiveEntry> _allEntries = new();
@@ -57,8 +58,14 @@ public partial class MainViewModel : ObservableObject
 
     // ── Callbacks (set by the UI layer for dialogs that need a WPF Window) ─────
 
-    /// Called when an encrypted archive needs a password.  Args = archive path.
-    public Func<string, Task<string?>>? PasswordRequested { get; set; }
+    /// <summary>
+    /// Called when an encrypted archive needs a password.
+    /// Args = (archive path, isRetry).
+    ///   isRetry=true means the previous attempt was wrong — the dialog shows a
+    ///   red "Incorrect password" hint.
+    /// Returns null when the user cancels.
+    /// </summary>
+    public Func<(string Path, bool IsRetry), Task<string?>>? PasswordRequested { get; set; }
 
     /// Called when the extraction needs a destination folder.
     public Func<string, Task<string?>>? FolderPickerRequested { get; set; }
@@ -73,12 +80,31 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public Func<string, List<ArchiveEntry>, string, Task<List<string>>>? ExtractFlatRequested { get; set; }
 
+    // ── Compression callbacks (set by the UI layer) ───────────────────────────
+
+    /// <summary>
+    /// Called when the user triggers "New Archive" or "Add to Archive…".
+    /// Receives (sourcePaths, suggestedOutputPath, descriptionLabel).
+    /// Returns a <see cref="CreateArchiveResult"/> or null if the user cancelled.
+    /// </summary>
+    public Func<(IReadOnlyList<string> Sources, string? SuggestedPath, string Description),
+                Task<Winpress.Views.CreateArchiveResult?>>? CreateArchiveRequested { get; set; }
+
     // ── Constructor ───────────────────────────────────────────────────────────
 
-    public MainViewModel(ArchiveService archiveService, ExtractionService extractionService)
+    // ── Session password memory ────────────────────────────────────────────
+    // Remembers the last successfully-used password for the current session
+    // so the user isn't re-prompted for the same archive.
+    private string? _sessionPassword;
+
+    public MainViewModel(
+        ArchiveService     archiveService,
+        ExtractionService  extractionService,
+        CompressionService compressionService)
     {
-        _archiveService    = archiveService;
-        _extractionService = extractionService;
+        _archiveService     = archiveService;
+        _extractionService  = extractionService;
+        _compressionService = compressionService;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -294,6 +320,108 @@ public partial class MainViewModel : ObservableObject
         FileAssociationEnabled = FileAssociationService.IsRegistered();
     }
 
+    // ── Compression ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Opens the Create Archive dialog. Accepts a list of source paths to pre-fill.
+    /// Called from the File menu and from the --add-to-archive CLI arg.
+    /// </summary>
+    [RelayCommand]
+    public async Task CreateArchiveAsync(IReadOnlyList<string>? sourcePaths = null)
+    {
+        if (CreateArchiveRequested == null) return;
+
+        var sources   = sourcePaths ?? new List<string>();
+        var suggested = sources.Count == 1
+            ? Path.Combine(
+                Path.GetDirectoryName(sources[0]) ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                Path.GetFileNameWithoutExtension(sources[0]) + ".zip")
+            : null;
+
+        var description = sources.Count switch
+        {
+            0 => "No sources selected",
+            1 => $"Compressing: {Path.GetFileName(sources[0])}",
+            _ => $"Compressing {sources.Count} items"
+        };
+
+        var result = await CreateArchiveRequested((sources, suggested, description));
+        if (result == null) return;
+
+        await RunCompressionAsync(
+            sources,
+            result.OutputPath,
+            new CompressionOptions(result.Format, result.Password, result.Level));
+    }
+
+    /// <summary>
+    /// Silent one-click compression from the shell context menu.
+    /// Args = (shortFormatLabel e.g. "zip", sourcePath).
+    /// Output is placed next to the source with the appropriate extension.
+    /// </summary>
+    [RelayCommand]
+    public async Task CompressHereAsync((string Format, string SourcePath) args)
+    {
+        var fmt = Winpress.Models.CompressionFormatExtensions.FromShortLabel(args.Format);
+        var ext = fmt.ToExtension();
+
+        var dir      = Path.GetDirectoryName(args.SourcePath)
+                       ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        var stem     = Path.GetFileNameWithoutExtension(args.SourcePath);
+        var outPath  = Path.Combine(dir, stem + ext);
+
+        // Avoid overwriting: append (1), (2) … until the path is free.
+        var i = 1;
+        while (File.Exists(outPath))
+            outPath = Path.Combine(dir, $"{stem} ({i++}){ext}");
+
+        await RunCompressionAsync(
+            new List<string> { args.SourcePath },
+            outPath,
+            new CompressionOptions(fmt));
+    }
+
+    // ── Internal compression runner ───────────────────────────────────────────
+
+    private async Task RunCompressionAsync(
+        IReadOnlyList<string> sources,
+        string                outputPath,
+        CompressionOptions    opts)
+    {
+        var archiveName = Path.GetFileName(outputPath);
+        var progressVm  = new ExtractionProgressViewModel(archiveName);
+        ShowProgressWindow?.Invoke(progressVm);
+
+        var progressReporter = new Progress<(int Completed, int Total, string CurrentFile)>(t =>
+        {
+            progressVm.FilesCompleted = t.Completed;
+            progressVm.TotalFiles     = t.Total;
+            progressVm.CurrentFile    = t.CurrentFile;
+            progressVm.Fraction       = t.Total > 0 ? (double)t.Completed / t.Total : 0;
+        });
+
+        try
+        {
+            await _compressionService.CompressAsync(
+                sources, outputPath, opts,
+                progressReporter,
+                progressVm.CancellationToken);
+
+            progressVm.FilesCompleted = progressVm.TotalFiles;
+            progressVm.Fraction       = 1.0;
+            progressVm.IsComplete     = true;
+            StatusText = $"Created: {archiveName}";
+        }
+        catch (OperationCanceledException)
+        {
+            progressVm.IsCancelled = true;
+        }
+        catch (Exception ex)
+        {
+            progressVm.ErrorMessage = ex.Message;
+        }
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     //  INTERNAL HELPERS
     // ══════════════════════════════════════════════════════════════════════════
@@ -308,20 +436,57 @@ public partial class MainViewModel : ObservableObject
         {
             var result = await _archiveService.OpenAsync(path, password);
 
+            // ── Password handling with session-memory ──────────────────────
             if (result.NeedsPassword)
             {
-                if (PasswordRequested != null)
+                // First, try the stored session password silently (only on first
+                // attempt with no explicit password).
+                if (password == null && _sessionPassword != null)
                 {
-                    var pwd = await PasswordRequested(path);
-                    if (pwd != null)
+                    var sessionResult = await _archiveService.OpenAsync(path, _sessionPassword);
+                    if (!sessionResult.NeedsPassword && sessionResult.Entries != null)
                     {
-                        await LoadArchiveInternalAsync(path, pwd, clearStack);
+                        result   = sessionResult;
+                        password = _sessionPassword;
+                    }
+                    else
+                    {
+                        // Session password no longer valid — clear it.
+                        _sessionPassword = null;
+                    }
+                }
+
+                // Still needs a password? Prompt the user (with retry feedback).
+                if (result.NeedsPassword)
+                {
+                    if (PasswordRequested != null)
+                    {
+                        bool isRetry = false;
+                        while (true)
+                        {
+                            var pwd = await PasswordRequested((path, isRetry));
+                            if (pwd == null) break;  // user cancelled
+
+                            var tryResult = await _archiveService.OpenAsync(path, pwd);
+                            if (!tryResult.NeedsPassword && tryResult.Entries != null)
+                            {
+                                _sessionPassword = pwd;
+                                result           = tryResult;
+                                password         = pwd;
+                                break;
+                            }
+                            // Wrong password → loop again with retry feedback
+                            isRetry = true;
+                        }
+                    }
+
+                    if (result.NeedsPassword)
+                    {
+                        StatusText   = "Archive required a password.";
+                        ErrorMessage = "This archive is password-protected.";
                         return;
                     }
                 }
-                StatusText   = "Archive required a password.";
-                ErrorMessage = "This archive is password-protected.";
-                return;
             }
 
             if (result.Entries == null)

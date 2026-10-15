@@ -68,6 +68,13 @@
                           Command="{Binding ExtractSelectedCommand}"
                           InputGestureText="Ctrl+Shift+E"/>
                 <Separator/>
+                <MenuItem Header="New Archive…"
+                          Click="MenuNewArchive_Click"
+                          InputGestureText="Ctrl+N"/>
+                <MenuItem Header="Compress Selected…"
+                          Command="{Binding CreateArchiveCommand}"
+                          InputGestureText="Ctrl+Shift+N"/>
+                <Separator/>
                 <MenuItem Header="_Exit"            Click="MenuExit_Click"
                           InputGestureText="Alt+F4"/>
             </MenuItem>
@@ -141,6 +148,17 @@
                             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE896;"
                                        FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="Extract All" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Compress (New Archive…) -->
+                    <Button Style="{StaticResource ToolbarButtonStyle}"
+                            Click="MenuNewArchive_Click"
+                            ToolTip="New Archive… (Ctrl+N)" Margin="4,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE7B8;"
+                                       FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Compress" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 

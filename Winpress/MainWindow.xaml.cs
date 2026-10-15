@@ -38,10 +38,11 @@ public partial class MainWindow : Window
         _extractionService = extractionService;
 
         // Wire up events that require UI-layer dialogs
-        _vm.PasswordRequested = ShowPasswordDialogAsync;
-        _vm.FolderPickerRequested = ShowFolderPickerAsync;
-        _vm.ShowProgressWindow = ShowProgressWindow;
-        _vm.ExtractFlatRequested = ExtractFlatAsync;
+        _vm.PasswordRequested       = ShowPasswordDialogAsync;
+        _vm.FolderPickerRequested   = ShowFolderPickerAsync;
+        _vm.ShowProgressWindow      = ShowProgressWindow;
+        _vm.ExtractFlatRequested    = ExtractFlatAsync;
+        _vm.CreateArchiveRequested  = ShowCreateArchiveDialogAsync;
 
         // Wire up mouse events for drag-and-drop and marquee selection
         ArchiveListView.PreviewMouseLeftButtonDown += ArchiveListView_PreviewMouseLeftButtonDown;
@@ -81,6 +82,24 @@ public partial class MainWindow : Window
     {
         var path = ShowOpenFileDialog();
         if (path != null) _vm.OpenArchiveCommand.Execute(path);
+    }
+
+    private void MenuNewArchive_Click(object sender, RoutedEventArgs e)
+    {
+        _vm.CreateArchiveCommand.Execute(null);
+    }
+
+    private Task<Winpress.Views.CreateArchiveResult?> ShowCreateArchiveDialogAsync(
+        (IReadOnlyList<string> Sources, string? SuggestedPath, string Description) args)
+    {
+        var dialog = new Winpress.Views.CreateArchiveDialog(
+            suggestedOutputPath: args.SuggestedPath,
+            sourceDescription:   args.Description)
+        {
+            Owner = this
+        };
+        var shown = dialog.ShowDialog();
+        return Task.FromResult(shown == true ? dialog.Result : null);
     }
 
     private void MenuExit_Click(object sender, RoutedEventArgs e) => Close();
@@ -427,9 +446,9 @@ public partial class MainWindow : Window
 
     // ── UI service implementations (injected into ViewModel) ──────────────────
 
-    private Task<string?> ShowPasswordDialogAsync(string archivePath)
+    private Task<string?> ShowPasswordDialogAsync((string Path, bool IsRetry) args)
     {
-        var dialog = new PasswordDialog { Owner = this };
+        var dialog = new PasswordDialog(args.IsRetry) { Owner = this };
         return Task.FromResult(
             dialog.ShowDialog() == true ? dialog.Password : null);
     }

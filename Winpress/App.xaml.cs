@@ -18,9 +18,10 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        var archiveService = new ArchiveService();
-        var extractionService = new ExtractionService();
-        var vm     = new MainViewModel(archiveService, extractionService);
+        var archiveService     = new ArchiveService();
+        var extractionService  = new ExtractionService();
+        var compressionService = new CompressionService();
+        var vm     = new MainViewModel(archiveService, extractionService, compressionService);
         var window = new MainWindow(vm, extractionService);
         window.Show();
 
@@ -60,6 +61,22 @@ public partial class App : Application
                 case "--extract-to":
                     if (File.Exists(archive) && dest != null)
                         vm.ExtractToPathCommand.Execute((archive, dest!));
+                    break;
+
+                // --compress-here <format> <path>
+                // e.g.  Winpress.exe --compress-here zip "C:\file.txt"
+                // args[0]=--compress-here  args[1]=format  args[2]=source
+                case "--compress-here":
+                    if (archive != null && dest != null &&
+                        (File.Exists(dest) || Directory.Exists(dest)))
+                        vm.CompressHereCommand.Execute((archive, dest));
+                    break;
+
+                // --add-to-archive <path>  → opens the Create Archive dialog
+                case "--add-to-archive":
+                    if (archive != null &&
+                        (File.Exists(archive) || Directory.Exists(archive)))
+                        vm.CreateArchiveCommand.Execute(new List<string> { archive });
                     break;
 
                 default:

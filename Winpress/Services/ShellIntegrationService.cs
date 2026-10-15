@@ -38,45 +38,121 @@ public class ShellIntegrationService
         var exePath = Environment.ProcessPath ?? GetExePath();
         foreach (var ext in Extensions)
             RegisterForExtension(ext, exePath);
+
+        // Register "Compress with Winpress" on ALL file types
+        RegisterForAllFiles(exePath);
+
+        // Register "Compress with Winpress" on FOLDER right-click
+        RegisterForDirectory(exePath);
+    }
+
+    private static void RegisterForAllFiles(string exePath)
+    {
+        var baseKey = $@"{HkcuRoot}\*\shell\{AppName}";
+        using (var key = Registry.CurrentUser.CreateSubKey(baseKey))
+        {
+            key.SetValue("",            "&Winpress");
+            key.SetValue("Icon",        $"\"{exePath}\",0");
+            key.SetValue("SubCommands", string.Empty);
+        }
+        RegisterCompressVerbs(baseKey, exePath, 1);
+    }
+
+    private static void RegisterForDirectory(string exePath)
+    {
+        foreach (var branch in new[] { @"Directory\shell", @"Directory\Background\shell" })
+        {
+            var baseKey = $@"{HkcuRoot}\{branch}\{AppName}";
+            using (var key = Registry.CurrentUser.CreateSubKey(baseKey))
+            {
+                key.SetValue("",            "&Winpress");
+                key.SetValue("Icon",        $"\"{exePath}\",0");
+                key.SetValue("SubCommands", string.Empty);
+            }
+            var placeholder = branch.Contains("Background") ? "%V" : "%1";
+            RegisterCompressVerbsWithPlaceholder(baseKey, exePath, placeholder, 1);
+        }
+    }
+
+    private static void RegisterCompressVerbsWithPlaceholder(
+        string baseKey, string exePath, string ph, int startIndex)
+    {
+        void Verb(string id, string label, string arg)
+        {
+            using var key = Registry.CurrentUser.CreateSubKey($@"{baseKey}\shell\{id}");
+            key.SetValue("", label);
+            using var cmd = key.CreateSubKey("command");
+            cmd.SetValue("", $"\"{exePath}\" {arg} \"{ph}\"");
+        }
+
+        Verb($"{startIndex:D2}_zip",    "Compress to ZIP",           "--compress-here zip");
+        Verb($"{startIndex+1:D2}_7z",   "Compress to 7z",            "--compress-here 7z");
+        Verb($"{startIndex+2:D2}_tgz",  "Compress to TAR.GZ",        "--compress-here tar.gz");
+        Verb($"{startIndex+3:D2}_tzst", "Compress to TAR+Zstandard", "--compress-here tar.zst");
+        Verb($"{startIndex+4:D2}_add",  "Add to Archive\u2026",      "--add-to-archive");
     }
 
     private static void RegisterForExtension(string extension, string exePath)
     {
-        // We register under SystemFileAssociations so the menu appears regardless
-        // of which program "owns" the extension.
         var baseKey = $@"{HkcuRoot}\SystemFileAssociations\{extension}\shell\{AppName}";
 
-        // Parent key — shows as a submenu with the Winpress label
+        // Parent — submenu header
         using (var key = Registry.CurrentUser.CreateSubKey(baseKey))
         {
-            key.SetValue("",         $"&Winpress");
-            key.SetValue("Icon",     $"\"{exePath}\",0");
+            key.SetValue("",            "&Winpress");
+            key.SetValue("Icon",        $"\"{exePath}\",0");
             key.SetValue("SubCommands", string.Empty);
         }
 
-        // Sub-verb: Open with Winpress
-        using (var key = Registry.CurrentUser.CreateSubKey($@"{baseKey}\shell\open"))
+        // 01 Open
+        using (var key = Registry.CurrentUser.CreateSubKey($@"{baseKey}\shell\01_open"))
         {
             key.SetValue("", "Open with Winpress");
             using var cmd = key.CreateSubKey("command");
             cmd.SetValue("", $"\"{exePath}\" \"%1\"");
         }
 
-        // Sub-verb: Extract Here
-        using (var key = Registry.CurrentUser.CreateSubKey($@"{baseKey}\shell\extracthere"))
+        // 02 Extract Here
+        using (var key = Registry.CurrentUser.CreateSubKey($@"{baseKey}\shell\02_extracthere"))
         {
             key.SetValue("", "Extract Here");
             using var cmd = key.CreateSubKey("command");
             cmd.SetValue("", $"\"{exePath}\" --extract-here \"%1\"");
         }
 
-        // Sub-verb: Extract to Folder…
-        using (var key = Registry.CurrentUser.CreateSubKey($@"{baseKey}\shell\extractto"))
+        // 03 Extract to Folder…
+        using (var key = Registry.CurrentUser.CreateSubKey($@"{baseKey}\shell\03_extractto"))
         {
             key.SetValue("", "Extract to Folder\u2026");
             using var cmd = key.CreateSubKey("command");
             cmd.SetValue("", $"\"{exePath}\" --extract-to \"%1\"");
         }
+
+        // ── visual separator before compress group ─────────────────────────
+        using (var key = Registry.CurrentUser.CreateSubKey($@"{baseKey}\shell\04_sep"))
+            key.SetValue("CommandFlags", 0x40, RegistryValueKind.DWord);
+
+        // 05–09  compress verbs (shared helper)
+        RegisterCompressVerbs(baseKey, exePath);
+    }
+
+    // ── Compress verbs (reused for *, Directory, and archive extensions) ──────
+
+    private static void RegisterCompressVerbs(string baseKey, string exePath, int startIndex = 5)
+    {
+        void Verb(string id, string label, string arg)
+        {
+            using var key = Registry.CurrentUser.CreateSubKey($@"{baseKey}\shell\{id}");
+            key.SetValue("", label);
+            using var cmd = key.CreateSubKey("command");
+            cmd.SetValue("", $"\"{exePath}\" {arg} \"%1\"");
+        }
+
+        Verb($"{startIndex:D2}_zip",    "Compress to ZIP",           "--compress-here zip");
+        Verb($"{startIndex+1:D2}_7z",   "Compress to 7z",            "--compress-here 7z");
+        Verb($"{startIndex+2:D2}_tgz",  "Compress to TAR.GZ",        "--compress-here tar.gz");
+        Verb($"{startIndex+3:D2}_tzst", "Compress to TAR+Zstandard", "--compress-here tar.zst");
+        Verb($"{startIndex+4:D2}_add",  "Add to Archive\u2026",      "--add-to-archive");
     }
 
     // ── Removal ───────────────────────────────────────────────────────────────
@@ -86,16 +162,21 @@ public class ShellIntegrationService
     {
         foreach (var ext in Extensions)
             UnregisterForExtension(ext);
+
+        TryDelete($@"{HkcuRoot}\*\shell\{AppName}");
+        TryDelete($@"{HkcuRoot}\Directory\shell\{AppName}");
+        TryDelete($@"{HkcuRoot}\Directory\Background\shell\{AppName}");
+    }
+
+    private static void TryDelete(string key)
+    {
+        try { Registry.CurrentUser.DeleteSubKeyTree(key, throwOnMissingSubKey: false); }
+        catch { /* best-effort */ }
     }
 
     private static void UnregisterForExtension(string extension)
     {
-        var baseKey = $@"{HkcuRoot}\SystemFileAssociations\{extension}\shell\{AppName}";
-        try
-        {
-            Registry.CurrentUser.DeleteSubKeyTree(baseKey, throwOnMissingSubKey: false);
-        }
-        catch { /* best-effort */ }
+        TryDelete($@"{HkcuRoot}\SystemFileAssociations\{extension}\shell\{AppName}");
     }
 
     // ── Status check ─────────────────────────────────────────────────────────
