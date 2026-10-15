@@ -45,3 +45,7 @@ global using DrawingContext   = System.Windows.Media.DrawingContext;
 global using Geometry         = System.Windows.Media.Geometry;
 global using Visual           = System.Windows.Media.Visual;
 global using Transform        = System.Windows.Media.Transform;
+
+// ── Additional aliases ────────────────────────────────────────────────────────
+global using Key              = System.Windows.Input.Key;
+global using SaveFileDialog   = Microsoft.Win32.SaveFileDialog;

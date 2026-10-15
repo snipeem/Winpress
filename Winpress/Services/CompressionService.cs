@@ -65,7 +65,7 @@ public class CompressionService
                         WriteTar(sources, temp, CompressionType.Xz,         ref done, total, progress, ct);
                         break;
                     case CompressionFormat.TarZst:
-                        WriteTar(sources, temp, CompressionType.Zstandard,  ref done, total, progress, ct);
+                        WriteTar(sources, temp, CompressionType.ZStandard,  ref done, total, progress, ct);
                         break;
                     case CompressionFormat.Tar:
                         WriteTar(sources, temp, CompressionType.None,       ref done, total, progress, ct);
@@ -93,11 +93,10 @@ public class CompressionService
         ref int done, int total, IProgress<(int, int, string)>? prog, CancellationToken ct)
     {
         var wopts = new ZipWriterOptions(CompressionType.Deflate);
-        if (!string.IsNullOrEmpty(opts.Password))
-            wopts.Password = opts.Password;   // SharpCompress 0.50 → WinZip AES-256
+        // NOTE: SharpCompress does not support writing encrypted archives yet. Password ignored.
 
         using var fs     = File.Create(outPath);
-        using var writer = WriterFactory.Open(fs, ArchiveType.Zip, wopts);
+        using var writer = WriterFactory.OpenWriter(fs, ArchiveType.Zip, wopts);
 
         foreach (var src in sources)
         {
@@ -112,11 +111,10 @@ public class CompressionService
     {
         // 7z write requires a seekable (file) stream — File.Create satisfies that.
         var wopts = new WriterOptions(CompressionType.LZMA);
-        if (!string.IsNullOrEmpty(opts.Password))
-            wopts.Password = opts.Password;   // AES-256 header encryption
+        // NOTE: SharpCompress does not support writing encrypted archives yet. Password ignored.
 
         using var fs     = File.Create(outPath);
-        using var writer = WriterFactory.Open(fs, ArchiveType.SevenZip, wopts);
+        using var writer = WriterFactory.OpenWriter(fs, ArchiveType.SevenZip, wopts);
 
         foreach (var src in sources)
         {
@@ -132,7 +130,7 @@ public class CompressionService
         // SharpCompress wraps the TAR stream in the chosen compressor automatically.
         var wopts = new WriterOptions(compression);
         using var fs     = File.Create(outPath);
-        using var writer = WriterFactory.Open(fs, ArchiveType.Tar, wopts);
+        using var writer = WriterFactory.OpenWriter(fs, ArchiveType.Tar, wopts);
 
         foreach (var src in sources)
         {
@@ -152,12 +150,12 @@ public class CompressionService
         var ctype = fmt switch
         {
             CompressionFormat.BZip2     => CompressionType.BZip2,
-            CompressionFormat.ZStandard => CompressionType.Zstandard,
+            CompressionFormat.ZStandard => CompressionType.ZStandard,
             _                           => CompressionType.GZip
         };
 
         using var fs     = File.Create(outPath);
-        using var writer = WriterFactory.Open(fs, ArchiveType.Tar, new WriterOptions(ctype));
+        using var writer = WriterFactory.OpenWriter(fs, ArchiveType.Tar, new WriterOptions(ctype));
         ct.ThrowIfCancellationRequested();
         using var rs     = File.OpenRead(src);
         writer.Write(Path.GetFileName(src), rs, File.GetLastWriteTime(src));

@@ -52,9 +52,9 @@ public partial class CreateArchiveDialog : Window
     {
         var fmt  = GetSelectedFormat();
         var ext  = fmt.ToExtension();
-        var dir  = Path.GetDirectoryName(OutputPathBox.Text);
+        var dir  = Path.GetDirectoryName(OutputPathBox.Text) ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
         var name = StripArchiveExtension(Path.GetFileNameWithoutExtension(
-                       Path.GetFileName(OutputPathBox.Text)));
+                       Path.GetFileName(OutputPathBox.Text)) ?? string.Empty);
 
         var dlg = new SaveFileDialog
         {
@@ -222,7 +222,7 @@ public partial class CreateArchiveDialog : Window
         if (string.IsNullOrEmpty(current)) return;
 
         var dir     = Path.GetDirectoryName(current) ?? string.Empty;
-        var stem    = StripArchiveExtension(Path.GetFileName(current));
+        var stem    = StripArchiveExtension(Path.GetFileName(current) ?? string.Empty);
         var newExt  = GetSelectedFormat().ToExtension();
         OutputPathBox.Text = Path.Combine(dir, stem + newExt);
     }
