@@ -168,7 +168,7 @@ public partial class CreateArchiveDialog : Window
         UpdateStrengthIndicator();
         UpdateAesBadge();
 
-        if (ConfirmPanel.Visibility == Visibility.Visible && ConfirmBox != null)
+        if (ConfirmPanel != null && ConfirmPanel.Visibility == Visibility.Visible && ConfirmBox != null)
         {
             ConfirmBox.Focus();
         }
