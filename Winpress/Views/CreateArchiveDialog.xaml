@@ -52,19 +52,13 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="8"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="4"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBox x:Name="SourcePathBox" Grid.Column="0"
                          Background="#FF3A3A3A" Foreground="White" CaretBrush="White"
                          BorderBrush="#FF555555" BorderThickness="1" Padding="8,6"
                          IsReadOnly="True" VerticalContentAlignment="Center"/>
-                <Button Grid.Column="2" Content="Add Files…" Width="72" Height="32"
-                        Click="AddFiles_Click"
-                        Style="{StaticResource ToolbarButtonStyle}"
-                        Background="#FF3A3A3A"/>
-                <Button Grid.Column="4" Content="Add Folder…" Width="80" Height="32"
-                        Click="AddFolder_Click"
+                <Button Grid.Column="2" Content="Add items…" Width="84" Height="32"
+                        Click="AddItems_Click"
                         Style="{StaticResource ToolbarButtonStyle}"
                         Background="#FF3A3A3A"/>
             </Grid>
@@ -152,12 +146,12 @@
         </StackPanel>
 
         <!-- ── Password strength bar ─────────────────────────────────────── -->
-        <Border x:Name="StrengthBar" Grid.Row="11" Height="3" CornerRadius="1.5"
+        <Border x:Name="StrengthBar" Grid.Row="12" Height="3" CornerRadius="1.5"
                 Background="#FF3A3A3A" Margin="0,0,0,0"
                 Visibility="Collapsed"/>
 
         <!-- ── AES-256 badge ─────────────────────────────────────────────── -->
-        <StackPanel Grid.Row="13" x:Name="AesBadgePanel"
+        <StackPanel Grid.Row="14" x:Name="AesBadgePanel"
                     Orientation="Horizontal" Visibility="Collapsed">
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72E;"
                        FontSize="12" Foreground="#2B7FD4"
@@ -168,7 +162,7 @@
         </StackPanel>
 
         <!-- ── Confirm password ───────────────────────────────────────────── -->
-        <StackPanel Grid.Row="15" x:Name="ConfirmPanel" Visibility="Collapsed">
+        <StackPanel Grid.Row="16" x:Name="ConfirmPanel" Visibility="Collapsed">
             <TextBlock Text="Confirm password" Foreground="#9A9A9A" FontSize="11" Margin="0,0,0,4"/>
             <Grid>
                 <PasswordBox x:Name="ConfirmBox"
@@ -193,12 +187,11 @@
         </StackPanel>
 
         <!-- ── Error ─────────────────────────────────────────────────────── -->
-        <TextBlock Grid.Row="17" x:Name="ErrorLabel"
+        <TextBlock Grid.Row="18" x:Name="ErrorLabel"
                    Foreground="#FFE53935" FontSize="11" Visibility="Collapsed"/>
 
         <!-- ── Buttons ───────────────────────────────────────────────────── -->
-        <StackPanel Grid.Row="19" Orientation="Horizontal" HorizontalAlignment="Right"
-                    Margin="0,16,0,0">
+        <StackPanel Grid.Row="20" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Width="88" Height="40" Click="Cancel_Click"
                     Style="{StaticResource ToolbarButtonStyle}"
                     Background="#FF3A3A3A" Margin="0,0,8,0"/>

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
+using Winpress.Helpers;
 using Winpress.Models;
 using Winpress.Services;
 
@@ -61,38 +62,23 @@ public partial class CreateArchiveDialog : Window
 
     // ── Interaction ──────────────────────────────────────────────────────────
 
-    private void AddFiles_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Single "Add items…" button: opens the native Windows IFileOpenDialog
+    /// with multi-select so the user can pick any mix of files and folders
+    /// in one step.
+    /// </summary>
+    private void AddItems_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFileDialog
-        {
-            Title = "Select files to compress",
-            Multiselect = true,
-            Filter = "All files|*.*"
-        };
+        var paths = ShellPicker.PickFilesAndFolders(this);
+        if (paths is null || paths.Length == 0) return;
 
-        if (dlg.ShowDialog(this) == true)
-        {
-            _sourcePaths.AddRange(dlg.FileNames);
-            UpdateSourceDisplay();
-            UpdateSuggestedOutputPath();
-        }
-    }
+        // Merge, deduplicate (case-insensitive on Windows), preserve order.
+        foreach (var p in paths)
+            if (!_sourcePaths.Contains(p, StringComparer.OrdinalIgnoreCase))
+                _sourcePaths.Add(p);
 
-    private void AddFolder_Click(object sender, RoutedEventArgs e)
-    {
-        // Use FolderBrowserDialog from System.Windows.Forms
-        using var dlg = new System.Windows.Forms.FolderBrowserDialog
-        {
-            Description = "Select folder to compress",
-            UseDescriptionForTitle = true
-        };
-
-        if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-        {
-            _sourcePaths.Add(dlg.SelectedPath);
-            UpdateSourceDisplay();
-            UpdateSuggestedOutputPath();
-        }
+        UpdateSourceDisplay();
+        UpdateSuggestedOutputPath();
     }
 
     private void UpdateSourceDisplay()

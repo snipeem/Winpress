@@ -11,14 +11,14 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>Winpress</RootNamespace>
     <AssemblyName>Winpress</AssemblyName>
-    <Version>1.2.1</Version>
-    <AssemblyVersion>1.2.1.0</AssemblyVersion>
-    <FileVersion>1.2.1.0</FileVersion>
+    <Version>1.2.3</Version>
+    <AssemblyVersion>1.2.3.0</AssemblyVersion>
+    <FileVersion>1.2.3.0</FileVersion>
     <Product>Winpress</Product>
     <Company>snipeem</Company>
     <Description>The archive manager Windows should have shipped with. Browse, preview, extract and compress 40+ formats with AES-256 encryption.</Description>
     <Copyright>Copyright © snipeem</Copyright>
-    <InformationalVersion>1.2.1</InformationalVersion>
+    <InformationalVersion>1.2.3</InformationalVersion>
     <!-- Code signing: Set to your certificate thumbprint or leave empty for unsigned builds -->
     <SignManifests>false</SignManifests>
     <ManifestCertificateThumbprint Condition="'$(CertificateThumbprint)' != ''">$(CertificateThumbprint)</ManifestCertificateThumbprint>
