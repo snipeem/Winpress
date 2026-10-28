@@ -112,19 +112,19 @@
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <!-- Later (always available) -->
-                <Button Content="Remind me later" Width="120" Height="36"
+                <Button Content="Remind me later" Width="130" Height="40"
                         Command="{Binding DismissCommand}"
                         Style="{StaticResource ToolbarButtonStyle}"
                         Background="#FF2D2D2D" Margin="0,0,8,0"/>
 
                 <!-- Download button — shown while idle -->
-                <Button Content="Download Update" Width="140" Height="36"
+                <Button Content="Download Update" Width="150" Height="40"
                         Command="{Binding UpdateNowCommand}"
                         Style="{StaticResource AccentButtonStyle}"
                         Visibility="{Binding IsReadyToApply, Converter={StaticResource InvBoolVis}}" Margin="0,0,8,0"/>
 
                 <!-- Apply button — shown after download completes -->
-                <Button Content="✓  Apply &amp; Restart" Width="140" Height="36"
+                <Button Content="✓  Apply &amp; Restart" Width="150" Height="40"
                         Command="{Binding ApplyUpdateCommand}"
                         Style="{StaticResource AccentButtonStyle}"
                         Visibility="{Binding IsReadyToApply, Converter={StaticResource BoolVis}}"/>

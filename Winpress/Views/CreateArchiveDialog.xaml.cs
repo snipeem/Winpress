@@ -160,18 +160,28 @@ public partial class CreateArchiveDialog : Window
     {
         if (_showPassword) return; // TextBox is the active field
 
-        // Mirror into the TextBox if user is currently seeing the plain text
+        // Toggle confirm panel visibility based on password length
         if (ConfirmPanel != null)
-            ConfirmPanel.Visibility = PasswordBox.Password.Length > 0
-                ? Visibility.Visible : Visibility.Collapsed;
+        {
+            bool showConfirm = PasswordBox.Password.Length > 0;
+            if (showConfirm && ConfirmPanel.Visibility == Visibility.Collapsed)
+            {
+                ConfirmPanel.Visibility = Visibility.Visible;
+                // Force window to recalculate size when new content appears
+                this.SizeToContent = SizeToContent.Manual;
+                this.SizeToContent = SizeToContent.Height;
+            }
+            else if (!showConfirm && ConfirmPanel.Visibility == Visibility.Visible)
+            {
+                ConfirmPanel.Visibility = Visibility.Collapsed;
+                // Force window to recalculate size when content disappears
+                this.SizeToContent = SizeToContent.Manual;
+                this.SizeToContent = SizeToContent.Height;
+            }
+        }
 
         UpdateStrengthIndicator();
         UpdateAesBadge();
-
-        if (ConfirmPanel != null && ConfirmPanel.Visibility == Visibility.Visible && ConfirmBox != null)
-        {
-            ConfirmBox.Focus();
-        }
     }
 
     private void PasswordTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -179,6 +189,25 @@ public partial class CreateArchiveDialog : Window
         if (!_showPassword) return;
         // Mirror back into the PasswordBox (keeps the model in sync)
         PasswordBox.Password = PasswordTextBox.Text;
+
+        // Also update confirm panel visibility when typing in the visible TextBox
+        if (ConfirmPanel != null)
+        {
+            bool showConfirm = PasswordTextBox.Text.Length > 0;
+            if (showConfirm && ConfirmPanel.Visibility == Visibility.Collapsed)
+            {
+                ConfirmPanel.Visibility = Visibility.Visible;
+                this.SizeToContent = SizeToContent.Manual;
+                this.SizeToContent = SizeToContent.Height;
+            }
+            else if (!showConfirm && ConfirmPanel.Visibility == Visibility.Visible)
+            {
+                ConfirmPanel.Visibility = Visibility.Collapsed;
+                this.SizeToContent = SizeToContent.Manual;
+                this.SizeToContent = SizeToContent.Height;
+            }
+        }
+
         UpdateStrengthIndicator();
         UpdateAesBadge();
     }
