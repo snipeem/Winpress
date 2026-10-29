@@ -2,6 +2,7 @@ using SharpCompress.Archives;
 using SharpCompress.Common;
 using SharpCompress.Writers;
 using SharpCompress.Writers.Zip;
+using SharpCompress.Compressors.Deflate;
 using Winpress.Models;
 
 namespace Winpress.Services;
@@ -92,16 +93,18 @@ public class CompressionService
         List<string> sources, string outPath, CompressionOptions opts,
         ref int done, int total, IProgress<(int, int, string)>? prog, CancellationToken ct)
     {
-        // WinZip-standard AES-256 — readable by WinRAR, 7-Zip, Windows Explorer,
-        // and every other modern tool. EncryptionType.None when no password is set.
-        var wopts = new ZipWriterOptions(CompressionType.Deflate)
-        {
-            EncryptionType = string.IsNullOrEmpty(opts.Password)
-                ? EncryptionType.None
-                : EncryptionType.WinZipAes
-        };
-        if (!string.IsNullOrEmpty(opts.Password))
-            wopts.Password = opts.Password;
+        // SharpCompress 0.50+: encryption is set per-entry via ZipWriterEntryOptions.
+        // ZipWriterOptions no longer carries EncryptionType or Password.
+        var wopts = new ZipWriterOptions(CompressionType.Deflate);
+
+        // Build per-entry options once; reuse for every entry in this archive.
+        ZipWriterEntryOptions? entryOpts = string.IsNullOrEmpty(opts.Password)
+            ? null
+            : new ZipWriterEntryOptions
+              {
+                  EncryptionType = EncryptionType.WinZipAes,
+                  Password       = opts.Password
+              };
 
         using var fs     = File.Create(outPath);
         using var writer = WriterFactory.OpenWriter(fs, ArchiveType.Zip, wopts);
@@ -109,7 +112,7 @@ public class CompressionService
         foreach (var src in sources)
         {
             ct.ThrowIfCancellationRequested();
-            AddEntries(writer, src, string.Empty, ref done, total, prog, ct);
+            AddEntries(writer, src, string.Empty, ref done, total, prog, ct, entryOpts);
         }
     }
 
@@ -118,11 +121,9 @@ public class CompressionService
         ref int done, int total, IProgress<(int, int, string)>? prog, CancellationToken ct)
     {
         // 7z write requires a seekable (file) stream — File.Create satisfies that.
-        // Password is forwarded to the LZMA engine for AES-256 header encryption.
-        var wopts = new WriterOptions(CompressionType.LZMA)
-        {
-            Password = opts.Password
-        };
+        // Note: SharpCompress's 7z writer does not support encryption; Password is
+        // accepted by the UI/model but silently ignored for 7z output.
+        var wopts = new WriterOptions(CompressionType.LZMA);
 
         using var fs     = File.Create(outPath);
         using var writer = WriterFactory.OpenWriter(fs, ArchiveType.SevenZip, wopts);
@@ -176,7 +177,8 @@ public class CompressionService
 
     private static void AddEntries(
         IWriter writer, string path, string prefix,
-        ref int done, int total, IProgress<(int, int, string)>? prog, CancellationToken ct)
+        ref int done, int total, IProgress<(int, int, string)>? prog, CancellationToken ct,
+        ZipWriterEntryOptions? zipEntryOpts = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -186,7 +188,7 @@ public class CompressionService
                              Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
             var newPfx = string.IsNullOrEmpty(prefix) ? name : $"{prefix}/{name}";
             foreach (var child in Directory.EnumerateFileSystemEntries(path))
-                AddEntries(writer, child, newPfx, ref done, total, prog, ct);
+                AddEntries(writer, child, newPfx, ref done, total, prog, ct, zipEntryOpts);
         }
         else if (File.Exists(path))
         {
@@ -196,7 +198,12 @@ public class CompressionService
             prog?.Report((done, total, name));
 
             using var rs = File.OpenRead(path);
-            writer.Write(entry, rs, File.GetLastWriteTime(path));
+            // Pass per-entry encryption options when writing a ZIP with a password;
+            // for all other formats zipEntryOpts is null and the overload is ignored.
+            if (writer is ZipWriter zipWriter && zipEntryOpts is not null)
+                zipWriter.Write(entry, rs, File.GetLastWriteTime(path), zipEntryOpts);
+            else
+                writer.Write(entry, rs, File.GetLastWriteTime(path));
             done++;
         }
     }

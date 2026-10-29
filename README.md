@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <img src="https://raw.githubusercontent.com/snipeem/Winpress/main/Winpress/Resources/icon.ico" alt="Winpress" width="80">
+  <img src="https://raw.githubusercontent.com/snipeem/Winpress/main/Winpress/Resources/app.ico" alt="Winpress" width="80">
   <br>Winpress<br>
 </h1>
 
@@ -38,23 +38,23 @@
 
 ## ⬇ Download
 
-<table align="center">
+<table align="center" width="100%">
   <tr>
-    <td align="center" width="240">
+    <td align="center" width="33%">
       <a href="https://github.com/snipeem/Winpress/releases/latest/download/Winpress.exe">
         <img src="https://img.shields.io/badge/Winpress.exe-Download-2B7FD4?style=for-the-badge&logo=windows&logoColor=white&labelColor=1a1a2e" height="46" alt="Download Winpress.exe"/>
       </a>
       <br/>
       <sub><b>✅ Recommended</b> · x64 · Self-contained<br/>No installer · No admin · Just run it</sub>
     </td>
-    <td align="center" width="220">
+    <td align="center" width="33%">
       <a href="https://github.com/snipeem/Winpress/releases/latest">
         <img src="https://img.shields.io/badge/x64%20ZIP-Download-1e3a5f?style=for-the-badge&logo=windows&logoColor=white&labelColor=1a1a2e" height="46" alt="Download x64 ZIP"/>
       </a>
       <br/>
       <sub>x64 portable ZIP<br/>Same binary, zipped for convenience</sub>
     </td>
-    <td align="center" width="220">
+    <td align="center" width="33%">
       <a href="https://github.com/snipeem/Winpress/releases/latest">
         <img src="https://img.shields.io/badge/ARM64%20ZIP-Download-1e3a5f?style=for-the-badge&logo=windows&logoColor=white&labelColor=1a1a2e" height="46" alt="Download ARM64 ZIP"/>
       </a>
@@ -67,7 +67,7 @@
 <p align="center">
   <sub>
     Windows 10 (1809) or later &nbsp;·&nbsp; x64 or ARM64 &nbsp;·&nbsp; ~30 MB &nbsp;·&nbsp; No dependencies
-    &nbsp;·&nbsp; <a href="https://github.com/snipeem/Winpress/releases">All releases →</a>
+    &nbsp;·&nbsp; <a href="https://github.com/snipeem/Winpress/releases">All Releases →</a>
   </sub>
 </p>
 
