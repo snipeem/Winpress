@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Winpress.ViewModels"
         xmlns:converters="clr-namespace:Winpress.Converters"
-        Title="Extracting…"
+        Title="{Binding WindowTitle}"
         Width="440" MinHeight="220"
         SizeToContent="Height"
         ResizeMode="NoResize"
@@ -37,7 +37,7 @@
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEC50;" FontSize="18"
                        Foreground="#2B7FD4" VerticalAlignment="Center" Margin="0,0,10,0"/>
             <StackPanel>
-                <TextBlock Text="Extracting" FontSize="12" Foreground="#9A9A9A"/>
+                <TextBlock Text="{Binding OperationLabel}" FontSize="12" Foreground="#9A9A9A"/>
                 <TextBlock Text="{Binding ArchiveName}" FontWeight="SemiBold" FontSize="14"/>
             </StackPanel>
         </StackPanel>
@@ -71,11 +71,11 @@
 
         <!-- Done / cancelled / error messages -->
         <TextBlock Grid.Row="7" Foreground="#4CAF50" FontWeight="SemiBold"
-                   Text="Extraction complete!"
+                   Text="{Binding CompleteMessage}"
                    Visibility="{Binding IsComplete, Converter={StaticResource BoolVis}}"
                    VerticalAlignment="Center"/>
         <TextBlock Grid.Row="7" Foreground="#9A9A9A"
-                   Text="Extraction was cancelled."
+                   Text="{Binding CancelledMessage}"
                    Visibility="{Binding IsCancelled, Converter={StaticResource BoolVis}}"
                    VerticalAlignment="Center"/>
         <TextBlock Grid.Row="7" Foreground="#E53935"

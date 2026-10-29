@@ -261,10 +261,13 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task<List<string>> ExtractSelectedToPathAsync(string destination)
     {
-        if (ArchivePath == null || SelectedEntries.Count == 0 || ExtractFlatRequested == null)
+        if (ArchivePath == null || SelectedEntries.Count == 0)
             return new List<string>();
 
-        return await ExtractFlatRequested(ArchivePath, SelectedEntries, destination);
+        // Call the service directly so _sessionPassword is forwarded —
+        // the ExtractFlatRequested callback has no password parameter.
+        return await _extractionService.ExtractFlatAsync(
+            ArchivePath, SelectedEntries, destination, password: _sessionPassword);
     }
 
     // ── Search / filter ───────────────────────────────────────────────────────
@@ -398,7 +401,7 @@ public partial class MainViewModel : ObservableObject
         CompressionOptions    opts)
     {
         var archiveName = Path.GetFileName(outputPath);
-        var progressVm  = new ExtractionProgressViewModel(archiveName);
+        var progressVm  = new ExtractionProgressViewModel(archiveName, isCompressing: true);
         ShowProgressWindow?.Invoke(progressVm);
 
         var progressReporter = new Progress<(int Completed, int Total, string CurrentFile)>(t =>
@@ -534,7 +537,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var tempDir  = Path.Combine(Path.GetTempPath(), "Winpress_" + Path.GetRandomFileName());
-            var extracted = await _extractionService.ExtractToTempAsync(ArchivePath, entry);
+            var extracted = await _extractionService.ExtractToTempAsync(ArchivePath, entry, password: _sessionPassword);
 
             if (extracted == null)
             {
@@ -560,7 +563,7 @@ public partial class MainViewModel : ObservableObject
         if (ArchivePath == null) return;
         StatusText = $"Extracting {entry.Name} for preview…";
 
-        var tempPath = await _extractionService.ExtractToTempAsync(ArchivePath, entry);
+        var tempPath = await _extractionService.ExtractToTempAsync(ArchivePath, entry, password: _sessionPassword);
         if (tempPath != null)
         {
             try
@@ -598,10 +601,12 @@ public partial class MainViewModel : ObservableObject
         try
         {
             if (extractAll)
-                await _extractionService.ExtractAllAsync(ArchivePath, destination, progress: progress,
-                    ct: progressVm.CancellationToken);
+                await _extractionService.ExtractAllAsync(ArchivePath, destination,
+                    password: _sessionPassword,
+                    progress: progress, ct: progressVm.CancellationToken);
             else
                 await _extractionService.ExtractSelectedAsync(ArchivePath, SelectedEntries, destination,
+                    password: _sessionPassword,
                     progress: progress, ct: progressVm.CancellationToken);
 
             progressVm.IsComplete = true;
@@ -771,7 +776,7 @@ public partial class ExtractionProgressViewModel : ObservableObject
     private readonly CancellationTokenSource _cts = new();
 
     [ObservableProperty] private string  _archiveName;
-    [ObservableProperty] private string  _currentFile    = string.Empty;
+    [ObservableProperty] private string  _currentFile      = string.Empty;
     [ObservableProperty] private int     _filesCompleted;
     [ObservableProperty] private int     _totalFiles;
     [ObservableProperty] private double  _fraction;
@@ -779,10 +784,25 @@ public partial class ExtractionProgressViewModel : ObservableObject
     [ObservableProperty] private bool    _isCancelled;
     [ObservableProperty] private string? _errorMessage;
 
+    // Context-aware labels — bound to ProgressWindow.xaml
+    [ObservableProperty] private string _windowTitle      = "Extracting…";
+    [ObservableProperty] private string _operationLabel   = "Extracting";
+    [ObservableProperty] private string _completeMessage  = "Extraction complete!";
+    [ObservableProperty] private string _cancelledMessage = "Extraction was cancelled.";
+
     public CancellationToken CancellationToken => _cts.Token;
 
-    public ExtractionProgressViewModel(string archiveName) =>
-        ArchiveName = archiveName;
+    public ExtractionProgressViewModel(string archiveName, bool isCompressing = false)
+    {
+        _archiveName = archiveName;
+        if (isCompressing)
+        {
+            _windowTitle      = "Compressing…";
+            _operationLabel   = "Compressing";
+            _completeMessage  = "Compression complete!";
+            _cancelledMessage = "Compression was cancelled.";
+        }
+    }
 
     [RelayCommand]
     public void Cancel() => _cts.Cancel();
