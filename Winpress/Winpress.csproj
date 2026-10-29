@@ -43,7 +43,7 @@
   <ItemGroup>
     <!-- Archive reading/writing — 40+ formats, pure managed, no native deps -->
     <!-- Latest stable: 0.50.5 (Oct 2026) -->
-    <PackageReference Include="SharpCompress" Version="0.37.2" />
+    <PackageReference Include="SharpCompress" Version="0.50.5" />
 
     <!-- Source-generator MVVM — zero boilerplate, .NET 10 source-gen optimised -->
     <!-- Latest stable: 8.4.2 (Mar 2026) -->
