@@ -159,10 +159,9 @@ public class CompressionService
             var salt = RandomNumberGenerator.GetBytes(saltLen);
 
             // PBKDF2-SHA1: derive keyLen bytes for AES key + 2 bytes for PW verify
-            byte[] derivedBytes;
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password!, salt, iterations,
-                                                        HashAlgorithmName.SHA1))
-                derivedBytes = pbkdf2.GetBytes(keyLen + macLen + pwVerifyLen);
+            byte[] derivedBytes = Rfc2898DeriveBytes.Pbkdf2(
+                password!, salt, iterations,
+                HashAlgorithmName.SHA1, keyLen + macLen + pwVerifyLen);
 
             var aesKey   = derivedBytes[..keyLen];
             var hmacKey  = derivedBytes[keyLen..(keyLen + macLen)];
